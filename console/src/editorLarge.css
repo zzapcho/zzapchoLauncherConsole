@@ -1,0 +1,41 @@
+.console-status { max-width: min(720px, 54vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.console-home-title h1 { font-size: 48px; }
+.console-profile-strip { grid-auto-columns: 300px; padding-top: 18px; }
+.console-profile-card { min-height: 360px; border-radius: 30px; }
+.console-settings.launcher-shell { padding-left: 230px; }
+.console-settings-menu.launcher-menu-panel { width: 210px; padding: 14px; border-radius: 22px; }
+.console-settings-menu nav { gap: 6px; }
+.console-settings-menu nav button { height: 44px; border-radius: 14px; font-size: 13px; }
+.console-settings-panel { width: min(100%, 980px); margin: 0 auto; padding: 96px 28px 34px; }
+.console-settings-panel header { margin-bottom: 22px; }
+.console-settings-panel header h2 { font-size: 34px; letter-spacing: -.055em; }
+.console-settings-panel header span { margin-top: 8px; font-size: 12px; }
+.console-form-grid { width: 100%; max-width: 900px; gap: 14px; }
+.console-form-grid article { padding: 18px; border-radius: 20px; background: rgba(8,12,9,.58); }
+.console-form-grid article > span { margin-bottom: 8px; font-size: 12px; }
+.console-form-grid article input, .console-form-grid article select { height: 48px; border-radius: 15px; padding: 0 14px; font-size: 15px; }
+.console-form-grid .section-action { height: 48px; border-radius: 15px; font-size: 13px; }
+.console-content-manager { width: min(100%, 900px); max-width: 900px; }
+.console-content-toolbar { grid-template-columns: 210px minmax(0, 1fr); align-items: center; }
+.console-content-toolbar form { height: 46px; border-radius: 16px; }
+.console-content-toolbar input { font-size: 13px; }
+.console-content-toolbar form button { width: 70px; font-size: 12px; }
+.drop-zone { min-height: 82px; border-radius: 20px; font-size: 13px; }
+.content-list { gap: 10px; }
+.console-content-row { min-height: 68px; padding: 12px 14px; border-radius: 18px; }
+.console-content-row .content-indicator { width: 10px; height: 10px; }
+.console-content-row .content-name strong { font-size: 14px; }
+.console-content-row .content-name small { margin-top: 5px; font-size: 11px; }
+.modrinth-section { margin-top: 16px; }
+.modrinth-heading strong { font-size: 14px; }
+.modrinth-heading span { font-size: 11px; }
+.modrinth-results { gap: 9px; }
+.modrinth-results article { min-height: 64px; grid-template-columns: 44px minmax(0, 1fr) auto; border-radius: 18px; padding: 10px 12px; }
+.modrinth-results img, .project-placeholder { width: 44px; height: 44px; border-radius: 13px; }
+.modrinth-results strong { font-size: 13px; }
+.modrinth-results small { margin-top: 4px; font-size: 10px; }
+.modrinth-results article button { height: 34px; border-radius: 12px; padding: 0 13px; font-size: 11px; }
+.remove-content { width: 32px; height: 32px; font-size: 18px; }
+.section-empty { padding: 42px 16px; border-radius: 18px; font-size: 13px; }
+.console-actions .save-button { min-width: 102px; }
+@media (max-width: 860px) { .console-settings.launcher-shell { padding-left: 0; } .console-settings-panel { padding-top: 24px; } .console-content-toolbar { grid-template-columns: 1fr; } }
