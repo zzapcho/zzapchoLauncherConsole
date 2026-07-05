@@ -13,6 +13,7 @@ import "./mobileEditorTabs.css";
 import "./profileOrder.css";
 import "./mobileComfort.css";
 import "./mobilePolish.css";
+import "./mobileFixes.css";
 
 registerPwa();
 
