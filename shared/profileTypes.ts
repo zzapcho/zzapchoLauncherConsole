@@ -7,6 +7,27 @@ export interface LauncherAsset {
   required: boolean;
   url: string;
   sha256?: string;
+  sha1?: string;
+  sha512?: string;
+  source?: "modrinth" | "curseforge" | "upload" | "manual";
+  projectId?: string;
+  fileId?: string;
+  fileName?: string;
+}
+
+export interface LauncherModpack {
+  source: "modrinth" | "curseforge";
+  projectId: string;
+  slug: string;
+  title: string;
+  version: string;
+  minecraftVersion: string;
+  modLoader: ModLoader;
+  modLoaderVersion?: string;
+  javaVersion?: number;
+  fileUrl?: string;
+  fileId?: string;
+  manifestUrl?: string;
 }
 
 export interface DefaultServer {
@@ -49,6 +70,7 @@ export interface LauncherProfile {
   shaders: LauncherAsset[];
   editableFields: EditableFields;
   launchOptions: LaunchOptions;
+  modpack?: LauncherModpack;
 }
 
 export type ProfilesManifest = LauncherProfile[];
