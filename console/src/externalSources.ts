@@ -16,6 +16,15 @@ export interface ExternalProject {
   follows?: number;
 }
 
+export interface AssetVersionOption {
+  id: string;
+  version: string;
+  fileName: string;
+  url: string;
+  sha1?: string;
+  sha512?: string;
+}
+
 export interface ModpackProfileSeed {
   project: ExternalProject;
   minecraftVersion?: string;
@@ -23,6 +32,14 @@ export interface ModpackProfileSeed {
   modLoaderVersion?: string;
   packVersion?: string;
   packFileUrl?: string;
+}
+
+interface ModrinthProject {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  icon_url?: string;
 }
 
 interface ModrinthSearchHit {
@@ -76,6 +93,10 @@ function safeId(value: string) {
   return value.toLowerCase().trim().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || `asset-${Date.now()}`;
 }
 
+function projectPage(slugOrId: string) {
+  return `https://modrinth.com/project/${slugOrId}`;
+}
+
 function mapSearchHit(hit: ModrinthSearchHit): ExternalProject {
   return {
     source: "modrinth",
@@ -87,6 +108,19 @@ function mapSearchHit(hit: ModrinthSearchHit): ExternalProject {
     projectType: hit.project_type,
     author: hit.author,
     follows: hit.follows ?? hit.downloads,
+  };
+}
+
+function versionToOption(version: ModrinthVersion): AssetVersionOption | null {
+  const file = version.files.find((item) => item.primary) ?? version.files[0];
+  if (!file) return null;
+  return {
+    id: version.id,
+    version: version.version_number,
+    fileName: file.filename,
+    url: file.url,
+    sha1: file.hashes?.sha1,
+    sha512: file.hashes?.sha512,
   };
 }
 
@@ -104,29 +138,68 @@ export async function searchModrinthProjects(kind: ProjectKind, query = "", offs
   return data.hits.map(mapSearchHit);
 }
 
-export async function getModrinthAsset(project: ExternalProject, profile: LauncherProfile): Promise<LauncherAsset> {
+async function fetchModrinthProject(projectIdOrSlug: string): Promise<ModrinthProject | null> {
+  const response = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}`);
+  if (!response.ok) return null;
+  return response.json() as Promise<ModrinthProject>;
+}
+
+async function fetchCompatibleVersions(projectIdOrSlug: string, profile: LauncherProfile): Promise<ModrinthVersion[]> {
   const params = new URLSearchParams();
   params.set("game_versions", JSON.stringify([profile.minecraftVersion]));
   const loaders = loaderParam(profile);
   if (loaders.length) params.set("loaders", JSON.stringify(loaders));
-  const response = await fetch(`https://api.modrinth.com/v2/project/${project.slug}/version?${params.toString()}`);
+  const response = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version?${params.toString()}`);
   if (!response.ok) throw new Error("Modrinth version lookup failed");
-  const versions = await response.json() as ModrinthVersion[];
+  return response.json() as Promise<ModrinthVersion[]>;
+}
+
+export async function getModrinthVersionOptions(asset: LauncherAsset, profile: LauncherProfile): Promise<AssetVersionOption[]> {
+  const project = asset.projectId ?? asset.id;
+  const versions = await fetchCompatibleVersions(project, profile);
+  return versions.map(versionToOption).filter((item): item is AssetVersionOption => Boolean(item));
+}
+
+export async function getLatestModrinthAsset(asset: LauncherAsset, profile: LauncherProfile): Promise<LauncherAsset> {
+  const project = await fetchModrinthProject(asset.projectId ?? asset.id);
+  const versions = await getModrinthVersionOptions(asset, profile);
+  const latest = versions[0];
+  if (!latest) throw new Error(`${asset.name}: 호환되는 최신 파일이 없습니다.`);
+  return {
+    ...asset,
+    name: project?.title ?? asset.name,
+    version: latest.version,
+    url: latest.url,
+    sha1: latest.sha1,
+    sha512: latest.sha512,
+    source: "modrinth",
+    projectId: project?.id ?? asset.projectId ?? asset.id,
+    fileId: latest.id,
+    fileName: latest.fileName,
+    iconUrl: project?.icon_url ?? asset.iconUrl,
+    projectUrl: projectPage(project?.slug ?? asset.projectId ?? asset.id),
+  };
+}
+
+export async function getModrinthAsset(project: ExternalProject, profile: LauncherProfile): Promise<LauncherAsset> {
+  const versions = await fetchCompatibleVersions(project.slug, profile);
   const version = versions[0];
-  const file = version?.files.find((item) => item.primary) ?? version?.files[0];
-  if (!version || !file) throw new Error(`${project.title}: MC ${profile.minecraftVersion} / ${profile.modLoader}에 맞는 파일이 없습니다.`);
+  const option = version ? versionToOption(version) : null;
+  if (!version || !option) throw new Error(`${project.title}: MC ${profile.minecraftVersion} / ${profile.modLoader}에 맞는 파일이 없습니다.`);
   return {
     id: project.slug,
     name: project.title,
-    version: version.version_number,
+    version: option.version,
     required: true,
-    url: file.url,
-    sha1: file.hashes?.sha1,
-    sha512: file.hashes?.sha512,
+    url: option.url,
+    sha1: option.sha1,
+    sha512: option.sha512,
     source: "modrinth",
     projectId: project.projectId,
-    fileId: version.id,
-    fileName: file.filename,
+    fileId: option.id,
+    fileName: option.fileName,
+    iconUrl: project.iconUrl,
+    projectUrl: projectPage(project.slug),
   };
 }
 
@@ -212,6 +285,7 @@ export async function createProfileFromModrinthModpack(project: ExternalProject)
     javaVersion: profile.javaVersion,
     fileUrl: packFile.url,
     fileId: latest.id,
+    manifestUrl: projectPage(project.slug),
   };
 
   for (const file of index.files ?? []) {
