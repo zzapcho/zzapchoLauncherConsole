@@ -15,6 +15,7 @@ export interface LauncherAsset {
   fileName?: string;
   iconUrl?: string;
   projectUrl?: string;
+  fromModpack?: boolean;
 }
 
 export interface LauncherModpack {
