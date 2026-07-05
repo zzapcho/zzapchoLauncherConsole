@@ -9,6 +9,12 @@
   margin-top: 14px;
 }
 
+.editor-status-box {
+  width: min(1180px, calc(100% - 32px));
+  margin: 12px auto 0;
+  white-space: pre-wrap;
+}
+
 .content-column-fixed {
   min-height: 0;
   height: 100%;
@@ -23,28 +29,32 @@
   overflow: hidden;
 }
 
-.installed-scroll-shot {
-  max-height: 192px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.project-scroll-shot {
+.content-unified-scroll {
   flex: 1;
-  min-height: 180px;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
 }
 
-.installed-scroll-shot::-webkit-scrollbar,
-.project-scroll-shot::-webkit-scrollbar {
+.content-unified-scroll::-webkit-scrollbar {
   width: 8px;
 }
 
-.installed-scroll-shot::-webkit-scrollbar-thumb,
-.project-scroll-shot::-webkit-scrollbar-thumb {
+.content-unified-scroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
+}
+
+.installed-scroll-shot,
+.project-scroll-shot {
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.project-scroll-shot {
+  flex: initial;
 }
 
 .collapsible-card {
