@@ -1,4 +1,4 @@
-import type { LauncherAsset, LauncherProfile } from "../../shared/profileTypes";
+import type { LauncherAsset, LauncherProfile, ModLoader } from "../../shared/profileTypes";
 
 export type SourceKind = "modrinth" | "curseforge";
 export type ProjectKind = "mod" | "resourcepack" | "shader" | "modpack";
@@ -13,6 +13,14 @@ export interface ExternalProject {
   projectType: ProjectKind;
   author?: string;
   follows?: number;
+}
+
+export interface ModpackProfileSeed {
+  project: ExternalProject;
+  minecraftVersion?: string;
+  modLoader?: ModLoader;
+  packVersion?: string;
+  packFileUrl?: string;
 }
 
 interface ModrinthSearchHit {
@@ -36,11 +44,14 @@ interface ModrinthVersionFile {
 interface ModrinthVersion {
   id: string;
   version_number: string;
+  game_versions?: string[];
+  loaders?: string[];
   files: ModrinthVersionFile[];
 }
 
 const typeFacet = (kind: ProjectKind) => JSON.stringify([["project_type:" + kind]]);
 const loaderParam = (profile: LauncherProfile) => profile.modLoader === "vanilla" ? [] : [profile.modLoader];
+const loaderOrder: ModLoader[] = ["fabric", "forge", "quilt", "vanilla"];
 
 export async function searchModrinthProjects(kind: ProjectKind, query: string): Promise<ExternalProject[]> {
   const params = new URLSearchParams({ query, limit: "12", facets: typeFacet(kind) });
@@ -72,6 +83,22 @@ export async function getModrinthAsset(project: ExternalProject, profile: Launch
   const file = version?.files.find((item) => item.primary) ?? version?.files[0];
   if (!version || !file) throw new Error("No matching file for this profile");
   return { id: project.slug, name: project.title, version: version.version_number, required: true, url: file.url, sha256: file.hashes?.sha512 ?? file.hashes?.sha1 };
+}
+
+export async function getModrinthModpackSeed(project: ExternalProject): Promise<ModpackProfileSeed> {
+  const response = await fetch(`https://api.modrinth.com/v2/project/${project.slug}/version`);
+  if (!response.ok) throw new Error("Modrinth modpack version lookup failed");
+  const versions = await response.json() as ModrinthVersion[];
+  const latest = versions[0];
+  const file = latest?.files.find((item) => item.primary) ?? latest?.files[0];
+  const modLoader = loaderOrder.find((loader) => latest?.loaders?.includes(loader));
+  return {
+    project,
+    minecraftVersion: latest?.game_versions?.[0],
+    modLoader,
+    packVersion: latest?.version_number,
+    packFileUrl: file?.url,
+  };
 }
 
 export async function searchCurseForgeProjects(kind: ProjectKind, query: string): Promise<ExternalProject[]> {
