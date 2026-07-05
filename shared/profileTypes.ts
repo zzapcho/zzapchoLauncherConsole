@@ -40,6 +40,7 @@ export interface LauncherProfile {
   backgroundImage: string;
   accentColor: string;
   minecraftVersion: string;
+  javaVersion: string;
   modLoader: ModLoader;
   modLoaderVersion: string;
   defaultServer: DefaultServer;
@@ -74,6 +75,7 @@ export function createEmptyProfile(seed = Date.now()): LauncherProfile {
     backgroundImage: "/backgrounds/default.svg",
     accentColor: "#8fe388",
     minecraftVersion: "1.21.1",
+    javaVersion: "21",
     modLoader: "fabric",
     modLoaderVersion: "0.16.9",
     defaultServer: {
