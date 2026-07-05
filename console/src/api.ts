@@ -2,6 +2,20 @@ import type { ProfilesManifest } from "../../shared/profileTypes";
 
 const KEY = "zzapchoLauncherConsole.session";
 
+export interface LauncherMeta {
+  minecraft: {
+    latestRelease: string;
+    latestSnapshot: string;
+    releases: string[];
+    snapshots: string[];
+  };
+  loaders: {
+    fabric: string[];
+    quilt: string[];
+    forge: string[];
+  };
+}
+
 export const getSession = () => localStorage.getItem(KEY) ?? "";
 export const saveSession = (value: string) => localStorage.setItem(KEY, value);
 export const clearSession = () => localStorage.removeItem(KEY);
@@ -26,5 +40,6 @@ export async function login(username: string, secret: string) {
 }
 
 export const loadProfiles = () => api<{ profiles: ProfilesManifest; sha: string | null; source: string }>("/api/profiles");
+export const loadLauncherMeta = (minecraftVersion?: string) => api<LauncherMeta>(`/api/meta${minecraftVersion ? `?minecraftVersion=${encodeURIComponent(minecraftVersion)}` : ""}`);
 export const validateProfiles = (profiles: ProfilesManifest) => api<{ ok: boolean; errors: string[] }>("/api/validate", { method: "POST", body: JSON.stringify({ profiles }) });
 export const saveProfiles = (profiles: ProfilesManifest) => api<{ ok: boolean; sha: string | null }>("/api/profiles", { method: "PUT", body: JSON.stringify({ profiles }) });
