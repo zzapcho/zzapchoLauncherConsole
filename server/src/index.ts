@@ -7,6 +7,7 @@ import express from "express";
 import { createSession, requireAdmin } from "./auth.js";
 import { searchCurseForge } from "./curseforge.js";
 import { readManifest, writeManifest } from "./githubStore.js";
+import { getLauncherMeta } from "./meta.js";
 import { validateProfilesManifest } from "../../shared/profileValidation.js";
 
 dotenv.config();
@@ -48,6 +49,16 @@ app.post("/api/login", (req, res) => {
     return;
   }
   res.json({ session });
+});
+
+app.get("/api/meta", async (req, res) => {
+  try {
+    const minecraftVersion = typeof req.query.minecraftVersion === "string" ? req.query.minecraftVersion : undefined;
+    const meta = await getLauncherMeta(minecraftVersion);
+    res.json(meta);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "unknown error" });
+  }
 });
 
 app.get("/api/curseforge/search", async (req, res) => {
