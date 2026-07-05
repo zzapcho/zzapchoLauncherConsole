@@ -1,12 +1,12 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { BoardApp } from "./BoardApp";
+import { LauncherStyleConsole } from "./LauncherStyleConsole";
 import "./styles.css";
 import "./polish.css";
-import "./board.css";
+import "./launcherStyleConsole.css";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BoardApp />
+    <LauncherStyleConsole />
   </React.StrictMode>,
 );
