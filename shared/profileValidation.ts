@@ -44,6 +44,8 @@ function isValidAssetArray(value: unknown, path: string, errors: string[]): valu
     if (asset.sha1 !== undefined && !isString(asset.sha1)) errors.push(`${itemPath}.sha1 must be a string.`);
     if (asset.sha512 !== undefined && !isString(asset.sha512)) errors.push(`${itemPath}.sha512 must be a string.`);
     if (asset.source !== undefined && !["modrinth", "curseforge", "upload", "manual"].includes(String(asset.source))) errors.push(`${itemPath}.source is invalid.`);
+    if (asset.iconUrl !== undefined && !isString(asset.iconUrl)) errors.push(`${itemPath}.iconUrl must be a string.`);
+    if (asset.projectUrl !== undefined && !isString(asset.projectUrl)) errors.push(`${itemPath}.projectUrl must be a string.`);
   });
 
   return true;
