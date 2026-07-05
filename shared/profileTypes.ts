@@ -40,7 +40,7 @@ export interface LauncherProfile {
   backgroundImage: string;
   accentColor: string;
   minecraftVersion: string;
-  javaVersion: string;
+  javaVersion: number;
   modLoader: ModLoader;
   modLoaderVersion: string;
   defaultServer: DefaultServer;
@@ -66,6 +66,15 @@ export const DEFAULT_EDITABLE_FIELDS: EditableFields = {
   memory: true,
 };
 
+export function guessJavaVersion(minecraftVersion: string) {
+  const [majorRaw, minorRaw] = minecraftVersion.split(".");
+  const major = Number(majorRaw);
+  const minor = Number(minorRaw);
+  if (major > 1 || minor >= 20) return 21;
+  if (minor >= 18) return 17;
+  return 8;
+}
+
 export function createEmptyProfile(seed = Date.now()): LauncherProfile {
   return {
     id: `profile-${seed}`,
@@ -75,7 +84,7 @@ export function createEmptyProfile(seed = Date.now()): LauncherProfile {
     backgroundImage: "/backgrounds/default.svg",
     accentColor: "#8fe388",
     minecraftVersion: "1.21.1",
-    javaVersion: "21",
+    javaVersion: 21,
     modLoader: "fabric",
     modLoaderVersion: "0.16.9",
     defaultServer: {
