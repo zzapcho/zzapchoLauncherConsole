@@ -39,6 +39,8 @@ function normalizeAsset(value: unknown): LauncherAsset {
     ...(typeof item.projectId === "string" ? { projectId: item.projectId } : {}),
     ...(typeof item.fileId === "string" ? { fileId: item.fileId } : {}),
     ...(typeof item.fileName === "string" ? { fileName: item.fileName } : {}),
+    ...(typeof item.iconUrl === "string" ? { iconUrl: item.iconUrl } : {}),
+    ...(typeof item.projectUrl === "string" ? { projectUrl: item.projectUrl } : {}),
   };
 }
 
