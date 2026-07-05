@@ -90,8 +90,8 @@ export function validateProfilesManifest(value: unknown): ValidationResult {
     if (!isRecord(profile.defaultServer)) {
       errors.push(`${path}.defaultServer must be an object.`);
     } else {
-      if (!isNonEmptyString(profile.defaultServer.name)) errors.push(`${path}.defaultServer.name is required.`);
-      if (!isNonEmptyString(profile.defaultServer.address)) errors.push(`${path}.defaultServer.address is required.`);
+      if (!isString(profile.defaultServer.name)) errors.push(`${path}.defaultServer.name must be a string.`);
+      if (!isString(profile.defaultServer.address)) errors.push(`${path}.defaultServer.address must be a string.`);
       if (typeof profile.defaultServer.port !== "number" || profile.defaultServer.port < 1 || profile.defaultServer.port > 65535) {
         errors.push(`${path}.defaultServer.port must be 1-65535.`);
       }
