@@ -48,6 +48,20 @@
   flex: 0 0 34px;
 }
 
+.modpack-asset-badge {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: rgba(126, 239, 132, 0.16);
+  color: #b9ffba;
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  box-shadow: inset 0 0 0 1px rgba(126, 239, 132, 0.18);
+}
+
 @media (max-width: 520px) {
   .installed-card-shot:has(.update-icon-shot) {
     grid-template-columns: 34px minmax(0, 1fr) 32px 42px 28px;
