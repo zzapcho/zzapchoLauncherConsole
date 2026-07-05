@@ -1,11 +1,12 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { MinimalApp } from "./MinimalApp";
+import { BoardApp } from "./BoardApp";
 import "./styles.css";
 import "./polish.css";
+import "./board.css";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <MinimalApp />
+    <BoardApp />
   </React.StrictMode>,
 );
