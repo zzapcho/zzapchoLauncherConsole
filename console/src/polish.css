@@ -1,66 +1,119 @@
 body {
-  background: linear-gradient(180deg, #111318 0%, #090b0f 100%);
+  background: #0b0d12;
 }
 
 .app-shell {
-  padding: 22px;
+  padding: 20px;
+}
+
+.topbar {
+  margin-bottom: 12px;
+}
+
+.topbar h1 {
+  font-size: 28px;
+}
+
+.notice,
+.json-card {
+  display: none;
 }
 
 .workspace {
-  gap: 14px;
-  grid-template-columns: 270px minmax(640px, 1fr) 340px;
-}
-
-.notice {
-  border-color: rgba(255, 255, 255, .1);
-  background: rgba(255, 255, 255, .045);
-  color: #d9e2ee;
+  gap: 12px;
+  grid-template-columns: 260px minmax(640px, 1fr) 280px;
 }
 
 .sidebar,
 .card {
-  border-radius: 20px;
-  background: rgba(18, 20, 26, .82);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, .22);
+  border-radius: 18px;
+  background: rgba(18, 20, 26, .88);
+  box-shadow: none;
+}
+
+.sidebar {
+  height: calc(100vh - 40px);
 }
 
 .sidebar-head,
-.sidebar-actions {
-  padding: 16px;
+.sidebar-actions,
+.section-card,
+.sticky {
+  padding: 14px;
+}
+
+.profile-list {
+  padding: 10px;
+  gap: 6px;
 }
 
 .profile-item {
-  border-radius: 14px;
+  border-radius: 12px;
   background: transparent;
+  padding: 11px;
 }
 
 .profile-item.active {
-  background: rgba(255, 255, 255, .08);
-  border-color: rgba(255, 255, 255, .14);
+  background: rgba(255, 255, 255, .075);
+  border-color: rgba(255, 255, 255, .12);
+}
+
+.profile-item span {
+  height: 30px;
 }
 
 .hero-preview {
-  border-radius: 24px;
-  min-height: 190px;
+  border-radius: 20px;
+  min-height: 160px;
+  padding: 22px;
 }
 
-.section-card {
-  padding: 16px;
+.hero-preview h2 {
+  margin-top: 30px;
+  font-size: 28px;
+}
+
+.editor-stack {
+  gap: 12px;
+}
+
+.card-head {
+  margin-bottom: 12px;
 }
 
 button,
 input,
 select {
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .source-panel {
-  background: linear-gradient(145deg, rgba(143, 227, 136, .055), rgba(18, 20, 26, .86));
+  background: rgba(18, 20, 26, .88);
+}
+
+.source-toolbar {
+  grid-template-columns: 130px 130px 1fr 78px;
+}
+
+.drop-hint {
+  display: none;
+}
+
+.source-results {
+  max-height: 320px;
 }
 
 .source-card,
 .toggle {
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .05);
-  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .045);
+  border: 1px solid rgba(255, 255, 255, .065);
+}
+
+.preview-panel {
+  max-height: none;
+}
+
+pre {
+  display: none;
 }
