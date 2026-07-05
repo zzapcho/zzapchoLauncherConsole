@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import { createSession, requireAdmin } from "./auth.js";
+import { searchCurseForge } from "./curseforge.js";
 import { readManifest, writeManifest } from "./githubStore.js";
 import { validateProfilesManifest } from "../../shared/profileValidation.js";
 
@@ -24,14 +25,27 @@ app.post("/api/login", (req, res) => {
     res.status(400).json({ error: "username and secret are required" });
     return;
   }
-
   const session = createSession(username, secret);
   if (!session) {
     res.status(401).json({ error: "invalid login" });
     return;
   }
-
   res.json({ session });
+});
+
+app.get("/api/curseforge/search", async (req, res) => {
+  const query = String(req.query.query ?? "");
+  const kind = String(req.query.kind ?? "mod") as "mod" | "resourcepack" | "shader" | "modpack";
+  if (!query.trim()) {
+    res.json({ items: [] });
+    return;
+  }
+  try {
+    const items = await searchCurseForge(query, kind);
+    res.json({ items });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "unknown error" });
+  }
 });
 
 app.get("/api/profiles", requireAdmin, async (_req, res) => {
@@ -55,7 +69,6 @@ app.put("/api/profiles", requireAdmin, async (req, res) => {
     res.status(400).json(validation);
     return;
   }
-
   try {
     const result = await writeManifest(profiles);
     res.json({ ok: true, ...result });
