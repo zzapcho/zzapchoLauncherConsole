@@ -41,6 +41,7 @@ function normalizeAsset(value: unknown): LauncherAsset {
     ...(typeof item.fileName === "string" ? { fileName: item.fileName } : {}),
     ...(typeof item.iconUrl === "string" ? { iconUrl: item.iconUrl } : {}),
     ...(typeof item.projectUrl === "string" ? { projectUrl: item.projectUrl } : {}),
+    ...(typeof item.fromModpack === "boolean" ? { fromModpack: item.fromModpack } : {}),
   };
 }
 
