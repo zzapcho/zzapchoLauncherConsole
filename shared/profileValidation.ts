@@ -83,6 +83,7 @@ export function validateProfilesManifest(value: unknown): ValidationResult {
     if (!isString(profile.backgroundImage)) errors.push(`${path}.backgroundImage must be a string.`);
     if (!isNonEmptyString(profile.accentColor) || !HEX_COLOR.test(profile.accentColor)) errors.push(`${path}.accentColor must be a hex color.`);
     if (!isNonEmptyString(profile.minecraftVersion)) errors.push(`${path}.minecraftVersion is required.`);
+    if (!isNonEmptyString(profile.javaVersion)) errors.push(`${path}.javaVersion is required. Example: 17 or 21.`);
     if (!MOD_LOADERS.includes(profile.modLoader as never)) errors.push(`${path}.modLoader is invalid.`);
     if (!isString(profile.modLoaderVersion)) errors.push(`${path}.modLoaderVersion must be a string.`);
 
