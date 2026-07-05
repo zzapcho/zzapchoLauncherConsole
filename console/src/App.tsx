@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { clearSession, getSession, loadProfiles, login, saveProfiles } from "./api";
 import { createEmptyProfile, MOD_LOADERS, type LauncherAsset, type LauncherProfile, type ProfilesManifest } from "../../shared/profileTypes";
 import { validateProfilesManifest } from "../../shared/profileValidation";
 import { ExternalAssetPicker } from "./ExternalAssetPicker";
@@ -13,6 +14,40 @@ function assetKey(kind: ProjectKind): AssetKind { return kind === "resourcepack"
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="field"><span>{label}</span>{children}</label>;
+}
+
+function LoginScreen({ onDone }: { onDone: () => void }) {
+  const [username, setUsername] = useState("admin");
+  const [secret, setSecret] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await login(username, secret);
+      onDone();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "로그인 실패");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <main className="login-page">
+    <form className="login-card" onSubmit={submit}>
+      <span className="mark">z</span>
+      <p className="eyebrow">zzapcho Launcher</p>
+      <h1>Console</h1>
+      <p className="muted">서버를 켜고, server/.env의 관리자 계정으로 로그인하세요.</p>
+      <Field label="아이디"><input value={username} onChange={(event) => setUsername(event.target.value)} /></Field>
+      <Field label="비밀번호"><input type="password" value={secret} onChange={(event) => setSecret(event.target.value)} placeholder="ADMIN_PASSWORD" /></Field>
+      <button disabled={busy}>{busy ? "확인 중..." : "로그인"}</button>
+      {error && <p className="error">{error}</p>}
+    </form>
+  </main>;
 }
 
 function AssetEditor({ title, items, onChange }: { title: string; items: LauncherAsset[]; onChange: (items: LauncherAsset[]) => void }) {
@@ -58,14 +93,14 @@ function ProfileEditor({ profile, onChange, onCreateProfileFromPack }: { profile
       <Field label="강조색"><input type="color" value={profile.accentColor} onChange={(event) => update({ accentColor: event.target.value })} /></Field>
     </div></section>
 
-    <section className="card section-card"><div className="card-head"><h3>실행 정보</h3><small>런처 연결 후 실행에 사용</small></div><div className="grid four">
+    <section className="card section-card"><div className="card-head"><h3>실행 정보</h3><small>런처가 이 값으로 프로필 실행</small></div><div className="grid four">
       <Field label="마크 버전"><input value={profile.minecraftVersion} onChange={(event) => update({ minecraftVersion: event.target.value })} /></Field>
-      <Field label="자바 버전"><input value={profile.javaVersion} onChange={(event) => update({ javaVersion: event.target.value })} placeholder="17 / 21" /></Field>
+      <Field label="자바 버전"><input type="number" value={profile.javaVersion} onChange={(event) => update({ javaVersion: Number(event.target.value) })} placeholder="17 / 21" /></Field>
       <Field label="모드로더"><select value={profile.modLoader} onChange={(event) => update({ modLoader: event.target.value as LauncherProfile["modLoader"] })}>{MOD_LOADERS.map((loader) => <option key={loader}>{loader}</option>)}</select></Field>
       <Field label="로더 버전"><input value={profile.modLoaderVersion} onChange={(event) => update({ modLoaderVersion: event.target.value })} /></Field>
     </div></section>
 
-    <section className="card section-card"><div className="card-head"><h3>기본 서버</h3><small>프로필 기본 접속 서버</small></div><div className="grid three">
+    <section className="card section-card"><div className="card-head"><h3>기본 서버</h3><small>지금은 콘솔 관리용. 런처 쪽 서버 자동 등록은 다음 단계.</small></div><div className="grid three">
       <Field label="서버 이름"><input value={profile.defaultServer.name} onChange={(event) => updateServer({ name: event.target.value })} /></Field>
       <Field label="주소"><input value={profile.defaultServer.address} onChange={(event) => updateServer({ address: event.target.value })} /></Field>
       <Field label="포트"><input type="number" value={profile.defaultServer.port} onChange={(event) => updateServer({ port: Number(event.target.value) })} /></Field>
@@ -86,11 +121,27 @@ function ProfileEditor({ profile, onChange, onCreateProfileFromPack }: { profile
 }
 
 export function App() {
+  const [sessionReady, setSessionReady] = useState(Boolean(getSession()));
   const [profiles, setProfiles] = useState<ProfilesManifest>([]);
   const [selectedId, setSelectedId] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [status, setStatus] = useState("서버 연결 대기 중");
   const selected = profiles.find((profile) => profile.id === selectedId) ?? profiles[0];
   const validation = useMemo(() => validateProfilesManifest(profiles), [profiles]);
+
+  const reload = async () => {
+    setStatus("런처 manifest 불러오는 중...");
+    const result = await loadProfiles();
+    setProfiles(result.profiles);
+    setSelectedId(result.profiles[0]?.id ?? "");
+    setDirty(false);
+    setStatus(result.source === "github" ? "GitHub에서 불러옴" : "GITHUB_TOKEN 없음: 빈 manifest로 시작");
+  };
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    reload().catch((error) => setStatus(error instanceof Error ? error.message : "불러오기 실패"));
+  }, [sessionReady]);
 
   const setProfile = (next: LauncherProfile) => { setProfiles((items) => items.map((item) => item.id === selected?.id ? next : item)); setSelectedId(next.id); setDirty(true); };
   const addProfile = () => { const profile = createEmptyProfile(); setProfiles((items) => [...items, profile]); setSelectedId(profile.id); setDirty(true); };
@@ -98,15 +149,28 @@ export function App() {
   const duplicate = () => { if (!selected) return; const profile = copy(selected); profile.id = `${selected.id}-copy-${Date.now().toString().slice(-4)}`; profile.name = `${selected.name} Copy`; setProfiles((items) => [...items, profile]); setSelectedId(profile.id); setDirty(true); };
   const remove = () => { if (!selected) return; setProfiles((items) => items.filter((item) => item.id !== selected.id)); setSelectedId(""); setDirty(true); };
   const move = (direction: -1 | 1) => { if (!selected) return; const index = profiles.findIndex((item) => item.id === selected.id); const target = index + direction; if (target < 0 || target >= profiles.length) return; const next = [...profiles]; [next[index], next[target]] = [next[target], next[index]]; setProfiles(next); setDirty(true); };
-  const exportJson = () => { navigator.clipboard.writeText(JSON.stringify(profiles, null, 2)); setDirty(false); };
+  const exportJson = () => { navigator.clipboard.writeText(JSON.stringify(profiles, null, 2)); setStatus("JSON 클립보드 복사 완료"); };
+  const save = async () => {
+    if (!validation.ok) { setStatus("검증 오류 때문에 저장 불가"); return; }
+    setStatus("GitHub에 저장 중...");
+    try {
+      await saveProfiles(profiles);
+      setDirty(false);
+      setStatus("런처 profiles.json 저장 완료");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "저장 실패");
+    }
+  };
+
+  if (!sessionReady) return <LoginScreen onDone={() => setSessionReady(true)} />;
 
   return <main className="app-shell">
-    <header className="topbar"><div><p className="eyebrow">zzapcho Launcher</p><h1>Console</h1></div><div className="top-actions"><span className={dirty ? "pill dirty" : "pill"}>{dirty ? "수정됨" : "로컬 편집"}</span><button onClick={exportJson}>JSON 복사</button></div></header>
-    <section className="notice">아직 런처 연결은 하지 않음. 여기서 프로필 구조를 만들고, Codex 작업 끝나면 런처 manifest에 연결하면 됨.</section>
+    <header className="topbar"><div><p className="eyebrow">zzapcho Launcher</p><h1>Console</h1></div><div className="top-actions"><span className={dirty ? "pill dirty" : "pill"}>{dirty ? "수정됨" : "동기화됨"}</span><button onClick={() => reload().catch((error) => setStatus(error instanceof Error ? error.message : "새로고침 실패"))}>새로고침</button><button onClick={exportJson}>JSON 복사</button><button onClick={save} disabled={!validation.ok}>GitHub 저장</button><button onClick={() => { clearSession(); setSessionReady(false); }}>나가기</button></div></header>
+    <section className="notice">콘솔은 `zzapcho/zzapchoLauncher`의 `src/data/profiles.json`을 읽고 저장합니다. 런처 앱의 원격 manifest 자동 갱신은 다음 단계에서 켜면 됨.</section>
     <div className="workspace">
       <aside className="sidebar"><div className="sidebar-head"><div><p className="eyebrow">Manifest</p><h2>Profiles</h2></div><button className="round" onClick={addProfile}>+</button></div><div className="profile-list">{profiles.length ? profiles.map((profile) => <button key={profile.id} className={`profile-item ${profile.id === selected?.id ? "active" : ""}`} onClick={() => setSelectedId(profile.id)}><span style={{ background: profile.accentColor }} /><strong>{profile.name}</strong><small>{profile.minecraftVersion} · Java {profile.javaVersion}</small></button>) : <div className="empty-list">프로필 없음<br />+ 눌러서 만들기</div>}</div><div className="sidebar-actions"><button onClick={duplicate} disabled={!selected}>복제</button><button onClick={() => move(-1)} disabled={!selected}>위로</button><button onClick={() => move(1)} disabled={!selected}>아래로</button><button className="danger" onClick={remove} disabled={!selected}>삭제</button></div></aside>
       <section className="main-panel">{selected ? <ProfileEditor profile={selected} onChange={setProfile} onCreateProfileFromPack={createFromPack} /> : <div className="blank"><h2>프로필 없음</h2><p>왼쪽 + 버튼으로 새 프로필을 만들면 됨.</p></div>}</section>
-      <aside className="preview-panel"><section className="card sticky"><div className="card-head"><h3>검증</h3><span className={validation.ok ? "ok" : "bad"}>{validation.ok ? "OK" : "ERROR"}</span></div>{validation.ok ? <p className="muted">문제 없음</p> : <ul className="errors">{validation.errors.map((error) => <li key={error}>{error}</li>)}</ul>}</section><section className="card json-card"><div className="card-head"><h3>JSON</h3><small>{profiles.length} profiles</small></div><pre>{JSON.stringify(profiles, null, 2)}</pre></section></aside>
+      <aside className="preview-panel"><section className="card sticky"><div className="card-head"><h3>검증</h3><span className={validation.ok ? "ok" : "bad"}>{validation.ok ? "OK" : "ERROR"}</span></div>{validation.ok ? <p className="muted">문제 없음</p> : <ul className="errors">{validation.errors.map((error) => <li key={error}>{error}</li>)}</ul>}<p className="status">{status}</p></section><section className="card json-card"><div className="card-head"><h3>JSON</h3><small>{profiles.length} profiles</small></div><pre>{JSON.stringify(profiles, null, 2)}</pre></section></aside>
     </div>
   </main>;
 }
