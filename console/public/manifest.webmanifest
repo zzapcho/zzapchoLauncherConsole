@@ -1,0 +1,27 @@
+{
+  "name": "zzapcho Launcher Console",
+  "short_name": "Console",
+  "description": "zzapcho Launcher profile and content management console",
+  "lang": "ko-KR",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#071009",
+  "theme_color": "#071009",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/pwa/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
