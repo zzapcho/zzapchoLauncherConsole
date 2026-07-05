@@ -1,0 +1,124 @@
+.profile-card-frame {
+  position: relative;
+  min-width: 0;
+}
+
+.profile-card-frame .profile-card-v2 {
+  width: 100%;
+  height: 100%;
+}
+
+.profile-open-button {
+  display: block;
+}
+
+.profile-order-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(14px);
+}
+
+.profile-order-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 34px;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #dbe6dd;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.profile-order-actions button:not(:disabled):hover {
+  background: rgba(143, 227, 136, 0.18);
+  color: #baffb8;
+}
+
+.profile-order-actions button:disabled {
+  opacity: 0.32;
+}
+
+.console-mobile-menu .mobile-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 42px 12px 4px;
+}
+
+.console-mobile-menu .mobile-menu-heading strong {
+  color: #f2fff3;
+  font-size: 1rem;
+  letter-spacing: -0.04em;
+}
+
+.console-mobile-menu .mobile-menu-heading span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(143, 227, 136, 0.12);
+  color: #a7f3a0;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.console-mobile-menu button.mobile-menu-danger {
+  color: #ff9aaa;
+}
+
+@media (max-width: 760px) {
+  .home-profile-grid .profile-card-frame {
+    width: 100%;
+  }
+
+  .profile-card-frame .profile-card-v2,
+  .profile-open-button {
+    min-height: 136px;
+    padding-bottom: 56px;
+  }
+
+  .profile-order-actions {
+    left: 14px;
+    right: 14px;
+    bottom: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .profile-order-actions button {
+    min-height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.055);
+    font-size: 0.78rem;
+  }
+
+  .console-mobile-menu {
+    padding: 16px;
+  }
+
+  .console-mobile-menu > button:not(.sheet-close) {
+    width: 100%;
+    min-height: 48px;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0 14px;
+    border-radius: 14px;
+  }
+}
