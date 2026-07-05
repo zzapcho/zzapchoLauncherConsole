@@ -96,8 +96,17 @@ app.put("/api/profiles", requireAdmin, async (req, res) => {
 
 const consoleDist = findConsoleDist();
 if (consoleDist) {
-  app.use(express.static(consoleDist));
+  console.log(`Serving console UI from ${consoleDist}`);
+  app.use(express.static(consoleDist, {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith("index.html")) res.setHeader("Cache-Control", "no-store");
+    },
+  }));
+  app.get(["/assets/*", "/favicon.ico"], (req, res) => {
+    res.status(404).type("text/plain").send(`Static file not found: ${req.path}. Rebuild console/dist and hard refresh the browser.`);
+  });
   app.get("*", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
     res.sendFile(path.join(consoleDist, "index.html"));
   });
 } else {
