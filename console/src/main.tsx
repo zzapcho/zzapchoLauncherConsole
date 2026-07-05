@@ -9,6 +9,7 @@ import "./modal.css";
 import "./editorRefine.css";
 import "./assetLayoutFix.css";
 import "./mobile.css";
+import "./mobileEditorTabs.css";
 
 registerPwa();
 
