@@ -1,0 +1,12 @@
+{
+  "name": "zzapcho-launcher-console-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev:console": "npm --prefix console run dev",
+    "dev:server": "npm --prefix server run dev",
+    "build:console": "npm --prefix console run build",
+    "build:server": "npm --prefix server run build"
+  }
+}
