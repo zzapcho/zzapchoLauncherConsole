@@ -1,0 +1,418 @@
+:root {
+  font-family: Inter, Pretendard, "Segoe UI", sans-serif;
+}
+
+.console-root {
+  --accent: #8fe388;
+  --background: #111913;
+  min-height: 100vh;
+  overflow: hidden;
+  color: #fff;
+  background: #0b100c;
+}
+
+.console-root * {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.24) rgba(255,255,255,.035);
+}
+
+.console-root *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.console-root *::-webkit-scrollbar-track {
+  margin: 5px 0;
+  border-radius: 999px;
+  background: rgba(255,255,255,.035);
+}
+
+.console-root *::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(255,255,255,.24);
+  background-clip: padding-box;
+}
+
+.console-topbar {
+  position: fixed;
+  z-index: 30;
+  top: 10px;
+  right: 10px;
+  left: 10px;
+  display: grid;
+  grid-template-columns: 34px auto 1fr;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.console-topbar > * {
+  pointer-events: auto;
+}
+
+.menu-button {
+  position: relative;
+}
+
+.menu-button span {
+  position: absolute;
+  width: 13px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.menu-button span:first-child { transform: translateY(-4px); }
+.menu-button span:last-child { transform: translateY(4px); }
+
+.console-status {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 12px;
+  color: rgba(255,255,255,.58);
+  background: rgba(10,14,11,.62);
+  backdrop-filter: blur(10px);
+  font-size: 9px;
+}
+
+.console-actions {
+  justify-self: end;
+  display: flex;
+  gap: 7px;
+}
+
+.console-actions button {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 12px;
+  color: #fff;
+  background: rgba(15,20,17,.62);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  font-size: 9px;
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.console-actions button:hover:not(:disabled) {
+  background: rgba(41,48,42,.76);
+  transform: scale(1.03);
+}
+
+.console-actions .save-button {
+  color: #071009;
+  border-color: transparent;
+  background: var(--accent);
+  font-weight: 800;
+}
+
+.console-actions button:disabled {
+  opacity: .46;
+  cursor: not-allowed;
+}
+
+.console-home {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 24px;
+  min-height: 100vh;
+  padding: 86px 0 54px;
+  background: radial-gradient(circle at 50% 0%, rgba(143,227,136,.12), transparent 32%), #0b100c;
+  animation: home-view-in .24s ease-out;
+}
+
+.console-home-title {
+  text-align: center;
+}
+
+.console-home-title h1 {
+  margin: 0;
+  font-size: 40px;
+  letter-spacing: -.055em;
+}
+
+.console-profile-strip {
+  display: grid;
+  grid-auto-columns: 260px;
+  grid-auto-flow: column;
+  gap: 16px;
+  align-content: center;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px max(28px, calc((100vw - 900px) / 2)) 24px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.console-profile-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.console-profile-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 320px;
+  padding: 20px;
+  overflow: hidden;
+  scroll-snap-align: center;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 24px;
+  color: #fff;
+  background: var(--background);
+  box-shadow: 0 18px 42px rgba(0,0,0,.28);
+  cursor: pointer;
+  text-align: left;
+  transition: transform .2s cubic-bezier(.2,.8,.2,1), border-color .18s ease, filter .18s ease;
+}
+
+.console-profile-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -20% -20%;
+  height: 120px;
+  background: var(--accent);
+  filter: blur(70px);
+  opacity: .28;
+}
+
+.console-profile-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  border-color: color-mix(in srgb, var(--accent) 60%, rgba(255,255,255,.2));
+  filter: brightness(1.06);
+}
+
+.console-profile-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.console-profile-card h2 {
+  margin: 50px 0 8px;
+  font-size: 25px;
+  line-height: 1.1;
+  letter-spacing: -.04em;
+}
+
+.console-profile-card p {
+  margin: 0;
+  color: rgba(255,255,255,.56);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.console-add-card {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgba(17,23,19,.78);
+  border-style: dashed;
+}
+
+.console-add-card strong {
+  color: var(--accent);
+  font-size: 54px;
+  line-height: 1;
+}
+
+.console-choice,
+.modpack-picker {
+  min-height: 100vh;
+  padding: 82px 20px 28px;
+  background: #0b100c;
+}
+
+.console-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  justify-content: center;
+  gap: 12px;
+  margin: 18px auto;
+}
+
+.console-choice-grid button {
+  min-height: 180px;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 17px;
+  color: #fff;
+  background: rgba(8,12,9,.48);
+  cursor: pointer;
+  text-align: left;
+  transition: transform .18s ease, background .18s ease;
+}
+
+.console-choice-grid button:hover {
+  transform: translateY(-2px);
+  background: rgba(24,30,25,.72);
+}
+
+.console-choice-grid h3,
+.console-choice-grid p {
+  margin: 0;
+}
+
+.console-choice-grid h3 {
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+.console-choice-grid p {
+  color: rgba(255,255,255,.48);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.source-switch {
+  margin: 0 auto 12px;
+}
+
+.console-settings.launcher-shell {
+  grid-template-rows: 1fr;
+  min-height: 100vh;
+  padding: 0 0 0 190px;
+}
+
+.console-settings::after {
+  background-image: var(--background);
+}
+
+.console-settings-menu.launcher-menu-panel {
+  position: fixed;
+  inset: 58px auto 12px 10px;
+  width: 170px;
+  padding: 10px;
+  opacity: 1;
+  clip-path: none;
+  transform: none;
+  pointer-events: auto;
+}
+
+.console-settings-menu nav button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 11px;
+  color: rgba(255,255,255,.78);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 620;
+  transition: color .14s ease, background .14s ease;
+}
+
+.console-settings-menu nav button:hover {
+  color: #fff;
+  background: rgba(255,255,255,.1);
+}
+
+.console-settings-menu nav button.active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.console-settings-panel {
+  padding-top: 82px;
+}
+
+.console-form-grid article input,
+.console-form-grid article select {
+  width: 100%;
+  height: 32px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 9px;
+  color: #fff;
+  background: rgba(255,255,255,.06);
+  outline: 0;
+  padding: 0 9px;
+  font-size: 10px;
+}
+
+.console-form-grid article input[type="color"] {
+  padding: 3px;
+}
+
+.console-content-manager {
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.section-action.is-locked {
+  color: #071009;
+  background: var(--accent);
+}
+
+.modpack-picker .modrinth-results {
+  width: min(620px, 100%);
+  margin: 0 auto;
+}
+
+.console-login {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: #0b1511;
+}
+
+.console-login-card {
+  display: grid;
+  width: min(100%, 320px);
+  gap: 11px;
+  justify-items: center;
+  text-align: center;
+}
+
+.console-login-card h1,
+.console-login-card p {
+  margin: 0;
+}
+
+.console-field {
+  display: grid;
+  width: 100%;
+  gap: 6px;
+  text-align: left;
+}
+
+.console-field span {
+  color: rgba(255,255,255,.44);
+  font-size: 9px;
+}
+
+.console-field input {
+  height: 36px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 10px;
+  color: #fff;
+  background: rgba(255,255,255,.06);
+  padding: 0 10px;
+}
+
+@keyframes section-in { from { opacity: 0; transform: translateY(4px); } }
+@keyframes home-view-in { from { opacity: 0; transform: translateY(4px) scale(.99); } }
+
+@media (max-width: 760px) {
+  .console-settings.launcher-shell {
+    padding-left: 0;
+  }
+
+  .console-settings-menu.launcher-menu-panel {
+    position: static;
+    width: auto;
+    margin: 62px 12px 0;
+  }
+
+  .console-choice-grid {
+    grid-template-columns: 1fr;
+  }
+}
