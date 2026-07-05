@@ -1,0 +1,6 @@
+.ios-switch-row { display: inline-grid; grid-template-columns: auto 52px; align-items: center; gap: 10px; }
+.ios-switch-row input { position: absolute; opacity: 0; }
+.ios-switch-row i { position: relative; display: block; width: 52px; height: 30px; border-radius: 999px; background: rgba(255,255,255,.18); }
+.ios-switch-row i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .2s ease; }
+.ios-switch-row input:checked + i { background: var(--accent); }
+.ios-switch-row input:checked + i::after { transform: translateX(22px); background: #071009; }
