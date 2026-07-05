@@ -41,6 +41,9 @@ function isValidAssetArray(value: unknown, path: string, errors: string[]): valu
     if (!isBoolean(asset.required)) errors.push(`${itemPath}.required must be boolean.`);
     if (!isString(asset.url)) errors.push(`${itemPath}.url must be a string.`);
     if (asset.sha256 !== undefined && !isString(asset.sha256)) errors.push(`${itemPath}.sha256 must be a string.`);
+    if (asset.sha1 !== undefined && !isString(asset.sha1)) errors.push(`${itemPath}.sha1 must be a string.`);
+    if (asset.sha512 !== undefined && !isString(asset.sha512)) errors.push(`${itemPath}.sha512 must be a string.`);
+    if (asset.source !== undefined && !["modrinth", "curseforge", "upload", "manual"].includes(String(asset.source))) errors.push(`${itemPath}.source is invalid.`);
   });
 
   return true;
@@ -55,6 +58,24 @@ function validateEditableFields(value: unknown, path: string, errors: string[]) 
   keys.forEach((key) => {
     if (!isBoolean(value[key])) errors.push(`${path}.${key} must be boolean.`);
   });
+}
+
+function validateModpack(value: unknown, path: string, errors: string[]) {
+  if (value === undefined) return;
+  if (!isRecord(value)) {
+    errors.push(`${path} must be an object.`);
+    return;
+  }
+  if (!["modrinth", "curseforge"].includes(String(value.source))) errors.push(`${path}.source is invalid.`);
+  ["projectId", "slug", "title", "version", "minecraftVersion"].forEach((key) => {
+    if (!isNonEmptyString(value[key])) errors.push(`${path}.${key} is required.`);
+  });
+  if (!MOD_LOADERS.includes(value.modLoader as never)) errors.push(`${path}.modLoader is invalid.`);
+  if (value.modLoaderVersion !== undefined && !isString(value.modLoaderVersion)) errors.push(`${path}.modLoaderVersion must be a string.`);
+  if (value.javaVersion !== undefined && typeof value.javaVersion !== "number") errors.push(`${path}.javaVersion must be a number.`);
+  if (value.fileUrl !== undefined && !isString(value.fileUrl)) errors.push(`${path}.fileUrl must be a string.`);
+  if (value.fileId !== undefined && !isString(value.fileId)) errors.push(`${path}.fileId must be a string.`);
+  if (value.manifestUrl !== undefined && !isString(value.manifestUrl)) errors.push(`${path}.manifestUrl must be a string.`);
 }
 
 export function validateProfilesManifest(value: unknown): ValidationResult {
@@ -101,6 +122,7 @@ export function validateProfilesManifest(value: unknown): ValidationResult {
     isValidAssetArray(profile.resourcePacks, `${path}.resourcePacks`, errors);
     isValidAssetArray(profile.shaders, `${path}.shaders`, errors);
     validateEditableFields(profile.editableFields, `${path}.editableFields`, errors);
+    validateModpack(profile.modpack, `${path}.modpack`, errors);
 
     if (!isRecord(profile.launchOptions)) {
       errors.push(`${path}.launchOptions must be an object.`);
