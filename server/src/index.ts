@@ -1,12 +1,14 @@
 import { existsSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import multer from "multer";
 import { createSession, requireAdmin } from "./auth.js";
 import { searchCurseForge } from "./curseforge.js";
-import { readManifest, writeManifest } from "./githubStore.js";
+import { getUploadRoot, readManifest, writeManifest } from "./localStore.js";
 import { getLauncherMeta } from "./meta.js";
 import { validateProfilesManifest } from "../../shared/profileValidation.js";
 
@@ -17,6 +19,17 @@ const port = Number(process.env.PORT ?? 3379);
 const host = process.env.HOST ?? "0.0.0.0";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const uploadRoot = getUploadRoot();
+const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? `http://127.0.0.1:${port}`;
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: Number(process.env.UPLOAD_MAX_BYTES ?? 128 * 1024 * 1024) },
+});
+
+const uploadKinds = ["mods", "resourcePacks", "shaders"] as const;
+type UploadKind = typeof uploadKinds[number];
+const allowedExt: Record<UploadKind, string[]> = { mods: [".jar"], resourcePacks: [".zip"], shaders: [".zip"] };
 
 function findConsoleDist() {
   const candidates = [
@@ -29,11 +42,31 @@ function findConsoleDist() {
   return candidates.find((candidate) => existsSync(path.join(candidate, "index.html"))) ?? null;
 }
 
+function sanitizeSegment(value: string) {
+  return value.normalize("NFKC").replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim().slice(0, 120) || `file-${Date.now()}`;
+}
+
+function sanitizeProfileId(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9_-]/g, "-").replace(/^-+|-+$/g, "") || "unknown-profile";
+}
+
+async function uniqueFilePath(dir: string, fileName: string) {
+  const parsed = path.parse(fileName);
+  let candidate = fileName;
+  let index = 1;
+  while (existsSync(path.join(dir, candidate))) {
+    candidate = `${parsed.name}-${index}${parsed.ext}`;
+    index += 1;
+  }
+  return { fileName: candidate, fullPath: path.join(dir, candidate) };
+}
+
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: "5mb" }));
+app.use("/uploads", express.static(uploadRoot, { fallthrough: false }));
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, service: "zzapcho-launcher-console-server" });
+  res.json({ ok: true, service: "zzapcho-launcher-console-server", store: "local" });
 });
 
 app.post("/api/login", (req, res) => {
@@ -98,6 +131,46 @@ app.get("/api/profiles", requireAdmin, async (_req, res) => {
 app.post("/api/validate", requireAdmin, (req, res) => {
   const result = validateProfilesManifest(req.body?.profiles);
   res.status(result.ok ? 200 : 400).json(result);
+});
+
+app.post("/api/uploads", requireAdmin, upload.single("file"), async (req, res) => {
+  try {
+    const profileId = sanitizeProfileId(String(req.body?.profileId ?? ""));
+    const kind = String(req.body?.kind ?? "") as UploadKind;
+    if (!uploadKinds.includes(kind)) {
+      res.status(400).json({ error: "kind must be mods, resourcePacks, or shaders." });
+      return;
+    }
+    if (!req.file) {
+      res.status(400).json({ error: "file is required." });
+      return;
+    }
+    const cleanName = sanitizeSegment(req.file.originalname);
+    const ext = path.extname(cleanName).toLowerCase();
+    if (!allowedExt[kind].includes(ext)) {
+      res.status(400).json({ error: `${kind}에는 ${allowedExt[kind].join(", ")} 파일만 업로드할 수 있습니다.` });
+      return;
+    }
+    const dir = path.join(uploadRoot, profileId, kind);
+    await mkdir(dir, { recursive: true });
+    const { fullPath, fileName } = await uniqueFilePath(dir, cleanName);
+    await writeFile(fullPath, req.file.buffer);
+    const url = new URL(`/uploads/${encodeURIComponent(profileId)}/${encodeURIComponent(kind)}/${encodeURIComponent(fileName)}`, publicBaseUrl.endsWith("/") ? publicBaseUrl : `${publicBaseUrl}/`).toString();
+    res.json({
+      ok: true,
+      asset: {
+        id: `${kind}-${Date.now()}-${fileName.replace(/\.[^.]+$/, "")}`,
+        name: fileName.replace(/\.(jar|zip)$/i, ""),
+        version: "uploaded",
+        required: true,
+        url,
+        source: "upload",
+        fileName,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "upload failed" });
+  }
 });
 
 app.put("/api/profiles", requireAdmin, async (req, res) => {
