@@ -46,6 +46,7 @@ function isValidAssetArray(value: unknown, path: string, errors: string[]): valu
     if (asset.source !== undefined && !["modrinth", "curseforge", "upload", "manual"].includes(String(asset.source))) errors.push(`${itemPath}.source is invalid.`);
     if (asset.iconUrl !== undefined && !isString(asset.iconUrl)) errors.push(`${itemPath}.iconUrl must be a string.`);
     if (asset.projectUrl !== undefined && !isString(asset.projectUrl)) errors.push(`${itemPath}.projectUrl must be a string.`);
+    if (asset.fromModpack !== undefined && !isBoolean(asset.fromModpack)) errors.push(`${itemPath}.fromModpack must be boolean.`);
   });
 
   return true;
