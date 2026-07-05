@@ -37,22 +37,44 @@
 
 @media (max-width: 760px) {
   .mobile-sheet-backdrop {
-    align-items: flex-start !important;
-    justify-content: flex-end !important;
-    padding: 0 !important;
-    background: rgba(0, 0, 0, 0.18);
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 0 10px calc(104px + env(safe-area-inset-bottom)) !important;
+    background: rgba(0, 0, 0, 0.24);
   }
 
   .mobile-sheet.console-mobile-menu {
     position: fixed !important;
-    top: calc(56px + env(safe-area-inset-top)) !important;
+    left: 10px !important;
     right: 10px !important;
-    bottom: auto !important;
-    left: auto !important;
-    width: min(330px, calc(100vw - 20px)) !important;
-    max-height: calc(100svh - 76px - env(safe-area-inset-top));
+    top: auto !important;
+    bottom: calc(108px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-height: min(420px, calc(100svh - 150px - env(safe-area-inset-bottom)));
     overflow-y: auto;
-    border-radius: 22px !important;
+    border-radius: 24px !important;
+  }
+
+  .modal-backdrop-v2 {
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 0 10px calc(104px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .confirm-modal-v2 {
+    width: 100% !important;
+    max-width: 440px;
+    max-height: min(520px, calc(100svh - 150px - env(safe-area-inset-bottom)));
+    overflow-y: auto;
+    border-radius: 24px !important;
+  }
+
+  .app-v2:has(.content-column.mobile-pane-active) .editor-status-box {
+    display: none !important;
+  }
+
+  .app-v2:has(#profile-settings-section.mobile-pane-active) .editor-status-box {
+    display: flex !important;
   }
 
   .home-title {
