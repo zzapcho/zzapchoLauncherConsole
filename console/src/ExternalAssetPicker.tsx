@@ -19,13 +19,13 @@ export function ExternalAssetPicker({ profile, onAddAsset, onCreatePack }: {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ExternalProject[]>([]);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("Modrinth는 바로 검색 가능. CurseForge는 서버 프록시 연결 예정.");
+  const [message, setMessage] = useState("Modrinth는 바로 검색 가능. CurseForge는 server/.env 키가 있으면 가능.");
 
   const search = async () => {
     setBusy(true);
     setMessage("검색 중...");
     try {
-      const items = source === "modrinth" ? await searchModrinthProjects(kind, query) : await searchCurseForgeProjects();
+      const items = source === "modrinth" ? await searchModrinthProjects(kind, query) : await searchCurseForgeProjects(kind, query);
       setResults(items);
       setMessage(`${items.length}개 찾음`);
     } catch (error) {
@@ -40,10 +40,14 @@ export function ExternalAssetPicker({ profile, onAddAsset, onCreatePack }: {
     setBusy(true);
     setMessage("파일 정보 확인 중...");
     try {
-      if (project.source !== "modrinth") throw new Error("CurseForge 추가는 서버 프록시 연결 후 가능");
       if (project.projectType === "modpack") {
         onCreatePack(project);
         setMessage("모드팩 기반 프로필 초안 생성됨");
+        return;
+      }
+      if (project.source !== "modrinth") {
+        onAddAsset(project.projectType, { id: project.slug, name: project.title, version: "curseforge", required: true, url: `curseforge://${project.projectId}` });
+        setMessage(`${project.title} 추가됨. 실제 파일 URL은 서버 연결 후 확정.`);
         return;
       }
       const asset = await getModrinthAsset(project, profile);
@@ -70,7 +74,7 @@ export function ExternalAssetPicker({ profile, onAddAsset, onCreatePack }: {
   };
 
   return <section className="card section-card source-panel" onDragOver={(event) => event.preventDefault()} onDrop={drop}>
-    <div className="card-head"><div><h3>빠른 추가</h3><small>Modrinth 검색 / CurseForge 준비 / 드래그앤드롭</small></div></div>
+    <div className="card-head"><div><h3>빠른 추가</h3><small>Modrinth / CurseForge / 드래그앤드롭</small></div></div>
     <div className="source-toolbar">
       <select value={source} onChange={(event) => setSource(event.target.value as SourceKind)}><option value="modrinth">Modrinth</option><option value="curseforge">CurseForge</option></select>
       <select value={kind} onChange={(event) => setKind(event.target.value as ProjectKind)}>{projectKinds.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
@@ -80,7 +84,7 @@ export function ExternalAssetPicker({ profile, onAddAsset, onCreatePack }: {
     <div className="drop-hint">파일을 여기에 끌어놓으면 .jar는 모드, shader 이름 포함 파일은 쉐이더, 나머지는 리소스팩으로 임시 추가됨</div>
     <p className="muted small">{message}</p>
     <div className="source-results">
-      {results.map((project) => <article key={project.projectId} className="source-card">
+      {results.map((project) => <article key={`${project.source}-${project.projectId}`} className="source-card">
         {project.iconUrl ? <img src={project.iconUrl} alt="" /> : <span className="project-icon" />}
         <div><strong>{project.title}</strong><small>{project.projectType} · {project.author ?? project.source}</small><p>{project.description}</p></div>
         <button onClick={() => void add(project)} disabled={busy}>{project.projectType === "modpack" ? "프로필로" : "추가"}</button>
