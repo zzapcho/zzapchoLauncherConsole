@@ -24,6 +24,7 @@ export const clearSession = () => localStorage.removeItem(KEY);
 function expireSession() {
   clearSession();
   window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+  window.setTimeout(() => window.location.reload(), 80);
 }
 
 async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
