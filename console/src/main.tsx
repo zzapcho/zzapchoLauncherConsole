@@ -14,6 +14,7 @@ import "./profileOrder.css";
 import "./mobileComfort.css";
 import "./mobilePolish.css";
 import "./mobileFixes.css";
+import "./mobileReset.css";
 
 registerPwa();
 
