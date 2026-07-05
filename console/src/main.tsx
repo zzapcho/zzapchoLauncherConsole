@@ -4,5 +4,6 @@ import { App } from "./App";
 import "./index.css";
 import "./launcherContent.css";
 import "./homeFlow.css";
+import "./modal.css";
 
 createRoot(document.getElementById("root")!).render(<React.StrictMode><App /></React.StrictMode>);
