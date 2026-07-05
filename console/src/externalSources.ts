@@ -43,11 +43,7 @@ const typeFacet = (kind: ProjectKind) => JSON.stringify([["project_type:" + kind
 const loaderParam = (profile: LauncherProfile) => profile.modLoader === "vanilla" ? [] : [profile.modLoader];
 
 export async function searchModrinthProjects(kind: ProjectKind, query: string): Promise<ExternalProject[]> {
-  const params = new URLSearchParams({
-    query,
-    limit: "12",
-    facets: typeFacet(kind),
-  });
+  const params = new URLSearchParams({ query, limit: "12", facets: typeFacet(kind) });
   const response = await fetch("https://api.modrinth.com/v2/search?" + params.toString());
   if (!response.ok) throw new Error("Modrinth search failed");
   const data = await response.json() as { hits: ModrinthSearchHit[] };
@@ -69,24 +65,22 @@ export async function getModrinthAsset(project: ExternalProject, profile: Launch
   params.set("game_versions", JSON.stringify([profile.minecraftVersion]));
   const loaders = loaderParam(profile);
   if (loaders.length) params.set("loaders", JSON.stringify(loaders));
-
   const response = await fetch(`https://api.modrinth.com/v2/project/${project.slug}/version?${params.toString()}`);
   if (!response.ok) throw new Error("Modrinth version lookup failed");
   const versions = await response.json() as ModrinthVersion[];
   const version = versions[0];
   const file = version?.files.find((item) => item.primary) ?? version?.files[0];
   if (!version || !file) throw new Error("No matching file for this profile");
-
-  return {
-    id: project.slug,
-    name: project.title,
-    version: version.version_number,
-    required: true,
-    url: file.url,
-    sha256: file.hashes?.sha512 ?? file.hashes?.sha1,
-  };
+  return { id: project.slug, name: project.title, version: version.version_number, required: true, url: file.url, sha256: file.hashes?.sha512 ?? file.hashes?.sha1 };
 }
 
-export async function searchCurseForgeProjects(): Promise<ExternalProject[]> {
-  throw new Error("CurseForge needs a server proxy with CURSEFORGE_API_KEY. UI hook is ready, server route comes next.");
+export async function searchCurseForgeProjects(kind: ProjectKind, query: string): Promise<ExternalProject[]> {
+  const params = new URLSearchParams({ kind, query });
+  const response = await fetch("/api/curseforge/search?" + params.toString());
+  if (!response.ok) {
+    const data = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(data?.error ?? "CurseForge search failed");
+  }
+  const data = await response.json() as { items: ExternalProject[] };
+  return data.items;
 }
