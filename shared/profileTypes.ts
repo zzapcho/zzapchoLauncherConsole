@@ -13,6 +13,8 @@ export interface LauncherAsset {
   projectId?: string;
   fileId?: string;
   fileName?: string;
+  iconUrl?: string;
+  projectUrl?: string;
 }
 
 export interface LauncherModpack {
@@ -101,7 +103,7 @@ export function createEmptyProfile(seed = Date.now()): LauncherProfile {
   return {
     id: `profile-${seed}`,
     name: "New Profile",
-    description: "새 프로필 설명",
+    description: "",
     customText: "새로운 모험을 시작하세요.",
     backgroundImage: "/backgrounds/default.svg",
     accentColor: "#8fe388",
@@ -119,7 +121,7 @@ export function createEmptyProfile(seed = Date.now()): LauncherProfile {
     shaders: [],
     editableFields: { ...DEFAULT_EDITABLE_FIELDS },
     launchOptions: {
-      minMemoryMb: 2048,
+      minMemoryMb: 4096,
       maxMemoryMb: 4096,
       javaArgs: [],
     },
