@@ -6,5 +6,8 @@ import "./launcherContent.css";
 import "./homeFlow.css";
 import "./modal.css";
 import "./editorRefine.css";
+import "./assetLayoutFix.css";
 
-createRoot(document.getElementById("root")!).render(<React.StrictMode><App /></React.StrictMode>);
+const root = document.getElementById("root");
+if (!root) throw new Error("root element not found");
+createRoot(root).render(<React.StrictMode><App /></React.StrictMode>);
