@@ -1,0 +1,66 @@
+body {
+  background: linear-gradient(180deg, #111318 0%, #090b0f 100%);
+}
+
+.app-shell {
+  padding: 22px;
+}
+
+.workspace {
+  gap: 14px;
+  grid-template-columns: 270px minmax(640px, 1fr) 340px;
+}
+
+.notice {
+  border-color: rgba(255, 255, 255, .1);
+  background: rgba(255, 255, 255, .045);
+  color: #d9e2ee;
+}
+
+.sidebar,
+.card {
+  border-radius: 20px;
+  background: rgba(18, 20, 26, .82);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .22);
+}
+
+.sidebar-head,
+.sidebar-actions {
+  padding: 16px;
+}
+
+.profile-item {
+  border-radius: 14px;
+  background: transparent;
+}
+
+.profile-item.active {
+  background: rgba(255, 255, 255, .08);
+  border-color: rgba(255, 255, 255, .14);
+}
+
+.hero-preview {
+  border-radius: 24px;
+  min-height: 190px;
+}
+
+.section-card {
+  padding: 16px;
+}
+
+button,
+input,
+select {
+  border-radius: 12px;
+}
+
+.source-panel {
+  background: linear-gradient(145deg, rgba(143, 227, 136, .055), rgba(18, 20, 26, .86));
+}
+
+.source-card,
+.toggle {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .07);
+}
