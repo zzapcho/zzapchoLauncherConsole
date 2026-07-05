@@ -47,15 +47,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label className="console-field"><span>{label}</span>{children}</label>;
 }
 
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (value: boolean) => void; label: string }) {
+  return <label className="ios-switch-row"><span>{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><i /></label>;
+}
+
 function localFileAsset(file: File): LauncherAsset {
   const name = file.name.replace(/\.(jar|zip)$/i, "");
-  return {
-    id: safeId(name),
-    name,
-    version: "local",
-    required: false,
-    url: "",
-  };
+  return { id: safeId(name), name, version: "local", required: false, url: "" };
 }
 
 function LoginScreen({ onDone }: { onDone: () => void }) {
@@ -79,11 +77,11 @@ function LoginScreen({ onDone }: { onDone: () => void }) {
   </form></main>;
 }
 
-function TopBar({ dirty, status, canSave, onHome, onReload, onSave, onLogout }: { dirty: boolean; status: string; canSave: boolean; onHome: () => void; onReload: () => void; onSave: () => void; onLogout: () => void }) {
+function TopBar({ dirty, status, onHome, onReload, onSave, onLogout }: { dirty: boolean; status: string; onHome: () => void; onReload: () => void; onSave: () => void; onLogout: () => void }) {
   return <header className="console-topbar">
     <button className="floating-control menu-button" onClick={onHome}><span /><span /><span /></button>
     <p className="console-status">{dirty ? "수정됨" : "동기화됨"} · {status}</p>
-    <div className="console-actions"><button onClick={onReload}>새로고침</button><button className="save-button" disabled={!canSave} onClick={onSave}>GitHub 저장</button><button onClick={onLogout}>나가기</button></div>
+    <div className="console-actions"><button onClick={onReload}>새로고침</button><button className="save-button" onClick={onSave}>GitHub 저장</button><button onClick={onLogout}>나가기</button></div>
   </header>;
 }
 
@@ -151,7 +149,7 @@ function RuntimePanel({ profile, meta, onChange }: { profile: LauncherProfile; m
 
 function ServerPanel({ profile, onChange }: { profile: LauncherProfile; onChange: (profile: LauncherProfile) => void }) {
   const updateServer = (patch: Partial<LauncherProfile["defaultServer"]>) => onChange({ ...profile, defaultServer: { ...profile.defaultServer, ...patch } });
-  return <div className="settings-grid console-form-grid"><article><span>서버 이름</span><input value={profile.defaultServer.name} onChange={(event) => updateServer({ name: event.target.value })} /></article><article><span>주소</span><input value={profile.defaultServer.address} onChange={(event) => updateServer({ address: event.target.value })} placeholder="선택" /></article><article><span>포트</span><input type="number" value={profile.defaultServer.port} onChange={(event) => updateServer({ port: Number(event.target.value) })} /></article></div>;
+  return <div className="settings-grid console-form-grid"><article><span>서버 이름</span><input value={profile.defaultServer.name} onChange={(event) => updateServer({ name: event.target.value })} placeholder="선택" /></article><article><span>주소</span><input value={profile.defaultServer.address} onChange={(event) => updateServer({ address: event.target.value })} placeholder="선택" /></article><article><span>포트</span><input type="number" value={profile.defaultServer.port} onChange={(event) => updateServer({ port: Number(event.target.value) })} /></article></div>;
 }
 
 function ContentPanel({ profile, section, onChange }: { profile: LauncherProfile; section: ContentSection; onChange: (profile: LauncherProfile) => void }) {
@@ -161,14 +159,14 @@ function ContentPanel({ profile, section, onChange }: { profile: LauncherProfile
   const items = profile[section.key];
   const locked = !profile.editableFields[section.editableKey];
   const updateItems = (next: LauncherAsset[]) => onChange({ ...profile, [section.key]: next } as LauncherProfile);
-  const updateEditable = (value: boolean) => onChange({ ...profile, editableFields: { ...profile.editableFields, [section.editableKey]: value } });
+  const updateEditable = (canEdit: boolean) => onChange({ ...profile, editableFields: { ...profile.editableFields, [section.editableKey]: canEdit } });
   const addFiles = (files: FileList | File[]) => updateItems([...items, ...Array.from(files).map(localFileAsset)]);
   const search = async () => { if (!query.trim()) return; setResults(await searchModrinthProjects(section.projectKind, query)); };
   const addProject = async (project: ExternalProject) => { let asset: LauncherAsset = { id: project.slug, name: project.title, version: profile.minecraftVersion, required: true, url: `modrinth://${project.slug}` }; try { asset = await getModrinthAsset(project, profile); } catch { /* fallback for UI */ } updateItems([...items, asset]); };
   return <div className="content-manager console-content-manager">
-    <div className="content-toolbar"><button className={locked ? "section-action is-locked" : "section-action"} onClick={() => updateEditable(locked)}>{locked ? "유저 잠금 ON" : "유저 수정 허용"}</button><form onSubmit={(event) => { event.preventDefault(); void search(); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Modrinth 검색" /><button>검색</button></form></div>
+    <div className="content-toolbar console-content-toolbar"><Switch label="수정 제한" checked={locked} onChange={(value) => updateEditable(!value)} /><form onSubmit={(event) => { event.preventDefault(); void search(); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Modrinth 검색" /><button>검색</button></form></div>
     <div className={`drop-zone${dragging ? " is-dragging" : ""}`} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}>파일을 여기에 끌어다 놓으세요</div>
-    <div className="content-list">{items.length ? items.map((item, index) => <div className="content-row" key={`${item.id}-${index}`}><span className="content-indicator" /><div className="content-name"><strong>{item.name}</strong><small>{item.version || "version 없음"} · {item.url || "드롭/수동 추가"}</small></div><button className={`toggle${item.required ? " is-on" : ""}`} onClick={() => updateItems(items.map((current, i) => i === index ? { ...current, required: !current.required } : current))}><span /></button><button className="remove-content" onClick={() => updateItems(items.filter((_, i) => i !== index))}>×</button></div>) : <div className="section-empty">현재 선택된 {section.title}가 없습니다.</div>}</div>
+    <div className="content-list">{items.length ? items.map((item, index) => <div className="content-row console-content-row" key={`${item.id}-${index}`}><span className="content-indicator" /><div className="content-name"><strong>{item.name}</strong><small>{item.version || "version 없음"} · {item.url || "드롭/수동 추가"}</small></div><Switch label="필수" checked={item.required} onChange={(value) => updateItems(items.map((current, i) => i === index ? { ...current, required: value } : current))} /><button className="remove-content" onClick={() => updateItems(items.filter((_, i) => i !== index))}>×</button></div>) : <div className="section-empty">현재 선택된 {section.title}가 없습니다.</div>}</div>
     <div className="modrinth-section"><div className="modrinth-heading"><strong>Modrinth</strong><span>프로필 버전에 맞춰 추가</span></div><div className="modrinth-results">{results.map((project) => <article key={project.projectId}><span className="project-placeholder" style={project.iconUrl ? { backgroundImage: `url(${project.iconUrl})`, backgroundSize: "cover" } : undefined} /><div><strong>{project.title}</strong><small>{project.author || "unknown"}</small></div><button onClick={() => void addProject(project)}>추가</button></article>)}</div></div>
   </div>;
 }
@@ -199,7 +197,20 @@ export function LauncherStyleConsole() {
   const setProfile = (next: LauncherProfile) => { setProfiles((items) => items.map((item) => item.id === selectedId ? next : item)); setSelectedId(next.id); setDirty(true); };
   const createCustom = () => { const profile = createEmptyProfile(); setProfiles((items) => [...items, profile]); setSelectedId(profile.id); setDirty(true); setTab("profile"); setView("settings"); };
   const createPack = async (project: ExternalProject) => { const profile = createEmptyProfile(); profile.id = safeId(project.slug); profile.name = project.title; profile.description = project.description; profile.customText = `${project.title} 플레이`; if (project.source === "modrinth") { try { const seed = await getModrinthModpackSeed(project); if (seed.minecraftVersion) profile.minecraftVersion = seed.minecraftVersion; if (seed.modLoader) profile.modLoader = seed.modLoader; profile.javaVersion = guessJavaVersion(profile.minecraftVersion); profile.modLoaderVersion = latestLoader(meta, profile.modLoader); Object.assign(profile, { modpack: seed }); } catch { Object.assign(profile, { modpack: { project } }); } } else { Object.assign(profile, { modpack: { project } }); } setProfiles((items) => [...items, profile]); setSelectedId(profile.id); setDirty(true); setTab("runtime"); setView("settings"); };
-  const save = async () => { if (!validation.ok) { setStatus("검증 오류"); return; } await saveProfiles(profiles); setDirty(false); setStatus("저장 완료"); };
+  const save = async () => {
+    if (!validation.ok) {
+      setStatus(`검증 오류: ${validation.errors[0] ?? "확인 필요"}`);
+      return;
+    }
+    setStatus("GitHub 저장 중...");
+    try {
+      const result = await saveProfiles(profiles);
+      setDirty(false);
+      setStatus(`GitHub 저장 완료${result.sha ? ` · ${result.sha.slice(0, 7)}` : ""}`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "GitHub 저장 실패");
+    }
+  };
   if (!ready) return <LoginScreen onDone={() => setReady(true)} />;
-  return <main className="console-root"><TopBar dirty={dirty} status={status} canSave={validation.ok} onHome={() => setView("home")} onReload={() => void reload()} onSave={() => void save()} onLogout={() => { clearSession(); setReady(false); }} />{view === "home" && <Home profiles={profiles} onOpen={(id) => { setSelectedId(id); setTab("profile"); setView("settings"); }} onCreate={() => setView("create")} />}{view === "create" && <CreateChoice onBack={() => setView("home")} onCustom={createCustom} onModpack={() => setView("modpack")} />}{view === "modpack" && <ModpackPicker onBack={() => setView("create")} onCreate={createPack} />}{view === "settings" && selected && <Settings profile={selected} meta={meta} active={tab} onTab={setTab} onBack={() => setView("home")} onChange={setProfile} />}</main>;
+  return <main className="console-root"><TopBar dirty={dirty} status={status} onHome={() => setView("home")} onReload={() => void reload()} onSave={() => void save()} onLogout={() => { clearSession(); setReady(false); }} />{view === "home" && <Home profiles={profiles} onOpen={(id) => { setSelectedId(id); setTab("profile"); setView("settings"); }} onCreate={() => setView("create")} />}{view === "create" && <CreateChoice onBack={() => setView("home")} onCustom={createCustom} onModpack={() => setView("modpack")} />}{view === "modpack" && <ModpackPicker onBack={() => setView("create")} onCreate={createPack} />}{view === "settings" && selected && <Settings profile={selected} meta={meta} active={tab} onTab={setTab} onBack={() => setView("home")} onChange={setProfile} />}</main>;
 }
