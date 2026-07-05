@@ -10,9 +10,10 @@ import "./editorRefine.css";
 import "./assetLayoutFix.css";
 import "./mobile.css";
 import "./mobileEditorTabs.css";
+import "./profileOrder.css";
 
 registerPwa();
 
-const root = document.getElementById("root");
-if (!root) throw new Error("root element not found");
-createRoot(root).render(<React.StrictMode><App /></React.StrictMode>);
+const appRoot = document.getElementById("root");
+if (!appRoot) throw new Error("app root element not found");
+createRoot(appRoot).render(<React.StrictMode><App /></React.StrictMode>);
