@@ -61,6 +61,16 @@ app.get("/api/meta", async (req, res) => {
   }
 });
 
+app.get("/api/launcher/profiles", async (_req, res) => {
+  try {
+    const result = await readManifest();
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ profiles: result.profiles, source: result.source });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "unknown error" });
+  }
+});
+
 app.get("/api/curseforge/search", async (req, res) => {
   const query = String(req.query.query ?? "");
   const kind = String(req.query.kind ?? "mod") as "mod" | "resourcepack" | "shader" | "modpack";
