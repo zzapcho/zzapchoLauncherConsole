@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
@@ -9,7 +12,21 @@ import { validateProfilesManifest } from "../../shared/profileValidation.js";
 dotenv.config();
 
 const app = express();
-const port = Number(process.env.PORT ?? 8787);
+const port = Number(process.env.PORT ?? 3379);
+const host = process.env.HOST ?? "0.0.0.0";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function findConsoleDist() {
+  const candidates = [
+    process.env.CONSOLE_DIST_PATH,
+    path.resolve(process.cwd(), "../console/dist"),
+    path.resolve(process.cwd(), "console/dist"),
+    path.resolve(__dirname, "../../console/dist"),
+    path.resolve(__dirname, "../../../console/dist"),
+  ].filter(Boolean) as string[];
+  return candidates.find((candidate) => existsSync(path.join(candidate, "index.html"))) ?? null;
+}
 
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: "5mb" }));
@@ -77,6 +94,16 @@ app.put("/api/profiles", requireAdmin, async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`zzapcho Launcher Console server running on http://localhost:${port}`);
+const consoleDist = findConsoleDist();
+if (consoleDist) {
+  app.use(express.static(consoleDist));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(consoleDist, "index.html"));
+  });
+} else {
+  console.warn("console/dist not found. API server will run without the web UI until you build the console.");
+}
+
+app.listen(port, host, () => {
+  console.log(`zzapcho Launcher Console running on http://${host}:${port}`);
 });
