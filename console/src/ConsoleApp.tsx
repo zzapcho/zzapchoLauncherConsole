@@ -26,6 +26,7 @@ import {
 } from "../../shared/profileTypes";
 import { validateProfilesManifest } from "../../shared/profileValidation";
 import {
+  createProfileFromModrinthModpack,
   getModrinthAsset,
   searchCurseForgeProjects,
   searchModrinthProjects,
@@ -35,12 +36,10 @@ import {
 } from "./externalSources";
 
 type AssetKind = "mods" | "resourcePacks" | "shaders";
+type View = "home" | "editor" | "new" | "modpack";
+type SaveStatus = { type: "success" | "error"; message: string; sha?: string | null } | null;
 
-type SaveStatus = {
-  type: "success" | "error";
-  message: string;
-  sha?: string | null;
-} | null;
+const PAGE_SIZE = 12;
 
 const contentSections: Record<AssetKind, { title: string; projectKind: ProjectKind; accept: string; emptyHint: string }> = {
   mods: { title: "모드", projectKind: "mod", accept: ".jar", emptyHint: ".jar 파일을 추가하세요." },
@@ -79,7 +78,7 @@ function clone<T>(value: T): T {
 
 function localAsset(file: File): LauncherAsset {
   const name = file.name.replace(/\.(jar|zip)$/i, "");
-  return { id: safeId(name), name, version: "local", required: false, url: "" };
+  return { id: safeId(name), name, version: "local", required: false, url: "", source: "manual", fileName: file.name };
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -115,8 +114,7 @@ function LoginScreen({ onDone }: { onDone: () => void }) {
 
   return <main className="login-page notion-bg">
     <form className="login-card-v2" onSubmit={submit}>
-      <div className="brand-orb"><Settings2 /></div>
-      <p className="eyebrow">zzapcho Launcher</p>
+      <p className="eyebrow">Admin</p>
       <h1>Console</h1>
       <p className="muted">관리자 계정으로 로그인해서 프로필과 콘텐츠를 관리합니다.</p>
       <Field label="아이디"><input value={username} onChange={(event) => setUsername(event.target.value)} /></Field>
@@ -127,15 +125,46 @@ function LoginScreen({ onDone }: { onDone: () => void }) {
   </main>;
 }
 
-function ProfileCard({ profile, active, onClick }: { profile: LauncherProfile; active: boolean; onClick: () => void }) {
+function TopBar({ view, dirty, saveStatus, isSaving, canSave, onHome, onSave, onMenu }: { view: View; dirty: boolean; saveStatus: SaveStatus; isSaving: boolean; canSave: boolean; onHome: () => void; onSave: () => void; onMenu: () => void }) {
+  return <header className="topbar-v2 clean-topbar">
+    <div className="brand-line clean-brand"><button className="ghost-button" onClick={onHome}>홈</button><div className="brand-text"><h1>Console <span>{view === "home" ? "HOME" : dirty ? "EDIT" : "SYNC"}</span></h1></div></div>
+    <div className="top-actions-v2">
+      {saveStatus && <div className={`save-toast ${saveStatus.type}`}>{saveStatus.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}<span>{saveStatus.message}</span>{saveStatus.sha && <code>{shortSha(saveStatus.sha)}</code>}</div>}
+      <button className="primary-button" onClick={onSave} disabled={isSaving || !canSave}>{isSaving ? "저장 중" : <><Github size={17} />저장</>}</button>
+      <button className="mobile-menu-button" onClick={onMenu}><Menu /></button>
+    </div>
+  </header>;
+}
+
+function ProfileCard({ profile, active, onClick }: { profile: LauncherProfile; active?: boolean; onClick: () => void }) {
   const count = profile.mods.length + profile.resourcePacks.length + profile.shaders.length;
   return <button type="button" className={`profile-card-v2${active ? " active" : ""}`} style={{ "--accent": profile.accentColor } as React.CSSProperties} onClick={onClick}>
     <span className="profile-dot" />
     <strong>{profile.name}</strong>
     <p>{profile.description || profile.customText}</p>
     <span className="profile-meta"><b>MC {profile.minecraftVersion}</b><b>{profile.modLoader}</b><b>{count} files</b></span>
-    {active && <span className="editing-badge">편집 중</span>}
   </button>;
+}
+
+function HomeView({ profiles, onOpen, onNew }: { profiles: ProfilesManifest; onOpen: (id: string) => void; onNew: () => void }) {
+  return <section className="home-only-panel">
+    <div className="home-title"><p className="eyebrow">Profiles</p><h2>프로필</h2><span>{profiles.length}개</span></div>
+    <div className="home-profile-grid">
+      {profiles.map((profile) => <ProfileCard key={profile.id} profile={profile} onClick={() => onOpen(profile.id)} />)}
+      <button className="add-profile-card home-add-card" onClick={onNew}><Plus /><span>새 프로필</span></button>
+    </div>
+  </section>;
+}
+
+function NewProfileChoice({ onCustom, onModpack, onBack }: { onCustom: () => void; onModpack: () => void; onBack: () => void }) {
+  return <section className="new-choice-panel">
+    <div className="home-title"><p className="eyebrow">Create</p><h2>새 프로필</h2><span>시작 방식 선택</span></div>
+    <div className="new-choice-grid">
+      <button onClick={onCustom}><strong>커스텀</strong><p>버전, 로더, 모드/리소스팩/쉐이더를 직접 설정합니다.</p></button>
+      <button onClick={onModpack}><strong>모드팩</strong><p>Modrinth 모드팩을 가져와 .mrpack 내부 파일을 분해해서 프로필에 넣습니다.</p></button>
+    </div>
+    <button className="ghost-button" onClick={onBack}>홈으로</button>
+  </section>;
 }
 
 function ProfileSettings({ profile, onChange }: { profile: LauncherProfile; onChange: (profile: LauncherProfile) => void }) {
@@ -158,32 +187,17 @@ function ProfileSettings({ profile, onChange }: { profile: LauncherProfile; onCh
         <Field label="이름"><input value={profile.name} onChange={(event) => update({ name: event.target.value })} /></Field>
         <Field label="설명"><textarea value={profile.description} onChange={(event) => update({ description: event.target.value })} /></Field>
         <Field label="커스텀 문구"><input value={profile.customText} onChange={(event) => update({ customText: event.target.value })} /></Field>
-        <div className="split-grid">
-          <Field label="마크 버전"><input value={profile.minecraftVersion} onChange={(event) => update({ minecraftVersion: event.target.value })} /></Field>
-          <Field label="Java"><input type="number" value={profile.javaVersion} onChange={(event) => update({ javaVersion: Number(event.target.value) })} /></Field>
-        </div>
-        <div className="split-grid">
-          <Field label="로더"><select value={profile.modLoader} onChange={(event) => update({ modLoader: event.target.value as LauncherProfile["modLoader"] })}>{MOD_LOADERS.map((loader) => <option key={loader}>{loader}</option>)}</select></Field>
-          <Field label="로더 버전"><input value={profile.modLoaderVersion} onChange={(event) => update({ modLoaderVersion: event.target.value })} /></Field>
-        </div>
-        <div className="split-grid server-grid">
-          <Field label="서버 이름"><input value={profile.defaultServer.name} onChange={(event) => updateServer({ name: event.target.value })} /></Field>
-          <Field label="주소"><input value={profile.defaultServer.address} onChange={(event) => updateServer({ address: event.target.value })} /></Field>
-          <Field label="포트"><input type="number" value={profile.defaultServer.port} onChange={(event) => updateServer({ port: Number(event.target.value) })} /></Field>
-        </div>
-        <div className="split-grid">
-          <Field label="최소 MB"><input type="number" value={profile.launchOptions.minMemoryMb} onChange={(event) => updateLaunch({ minMemoryMb: Number(event.target.value) })} /></Field>
-          <Field label="최대 MB"><input type="number" value={profile.launchOptions.maxMemoryMb} onChange={(event) => updateLaunch({ maxMemoryMb: Number(event.target.value) })} /></Field>
-        </div>
+        <div className="split-grid"><Field label="마크 버전"><input value={profile.minecraftVersion} onChange={(event) => update({ minecraftVersion: event.target.value })} /></Field><Field label="Java"><input type="number" value={profile.javaVersion} onChange={(event) => update({ javaVersion: Number(event.target.value) })} /></Field></div>
+        <div className="split-grid"><Field label="로더"><select value={profile.modLoader} onChange={(event) => update({ modLoader: event.target.value as LauncherProfile["modLoader"] })}>{MOD_LOADERS.map((loader) => <option key={loader}>{loader}</option>)}</select></Field><Field label="로더 버전"><input value={profile.modLoaderVersion} onChange={(event) => update({ modLoaderVersion: event.target.value })} /></Field></div>
+        <div className="split-grid server-grid"><Field label="서버 이름"><input value={profile.defaultServer.name} onChange={(event) => updateServer({ name: event.target.value })} /></Field><Field label="주소"><input value={profile.defaultServer.address} onChange={(event) => updateServer({ address: event.target.value })} /></Field><Field label="포트"><input type="number" value={profile.defaultServer.port} onChange={(event) => updateServer({ port: Number(event.target.value) })} /></Field></div>
+        <div className="split-grid"><Field label="최소 MB"><input type="number" value={profile.launchOptions.minMemoryMb} onChange={(event) => updateLaunch({ minMemoryMb: Number(event.target.value) })} /></Field><Field label="최대 MB"><input type="number" value={profile.launchOptions.maxMemoryMb} onChange={(event) => updateLaunch({ maxMemoryMb: Number(event.target.value) })} /></Field></div>
         <Field label="강조색"><div className="color-input"><span>{profile.accentColor}</span><input type="color" value={profile.accentColor} onChange={(event) => update({ accentColor: event.target.value })} /></div></Field>
       </div>
     </div>
 
     <div className="notion-card">
       <div className="card-head-v2"><h3><Lock size={18} />런처 수정 허용</h3><small>true = 유저 수정 가능</small></div>
-      <div className="toggle-grid">
-        {(Object.entries(profile.editableFields) as Array<[keyof LauncherProfile["editableFields"], boolean]>).map(([key, value]) => <Toggle key={key} label={editableLabels[key]} checked={value} lock onChange={() => update({ editableFields: { ...profile.editableFields, [key]: !value } })} />)}
-      </div>
+      <div className="toggle-grid">{(Object.entries(profile.editableFields) as Array<[keyof LauncherProfile["editableFields"], boolean]>).map(([key, value]) => <Toggle key={key} label={editableLabels[key]} checked={value} lock onChange={() => update({ editableFields: { ...profile.editableFields, [key]: !value } })} />)}</div>
     </div>
   </section>;
 }
@@ -191,26 +205,32 @@ function ProfileSettings({ profile, onChange }: { profile: LauncherProfile; onCh
 function ContentLibraryPanel({ profile, kind, onChange }: { profile: LauncherProfile; kind: AssetKind; onChange: (profile: LauncherProfile) => void }) {
   const section = contentSections[kind];
   const inputRef = useRef<HTMLInputElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const [source, setSource] = useState<SourceKind>("modrinth");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ExternalProject[]>([]);
   const [message, setMessage] = useState("인기순");
   const [busy, setBusy] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [dragging, setDragging] = useState(false);
   const items = profile[kind];
   const updateItems = (next: LauncherAsset[]) => onChange({ ...profile, [kind]: next } as LauncherProfile);
 
-  const search = async (term = query) => {
+  const loadProjects = async (term = query, reset = true) => {
+    if (busy) return;
     setBusy(true);
+    const offset = reset ? 0 : results.length;
     setMessage(term.trim() ? "검색 중..." : "인기순 불러오는 중...");
     try {
       const next = source === "modrinth"
-        ? await searchModrinthProjects(section.projectKind, term)
+        ? await searchModrinthProjects(section.projectKind, term, offset, PAGE_SIZE)
         : await searchCurseForgeProjects(section.projectKind, term || section.title);
-      setResults(next);
-      setMessage(term.trim() ? `${next.length}개 찾음` : "인기순");
+      setResults((current) => reset ? next : [...current, ...next.filter((item) => !current.some((old) => old.projectId === item.projectId))]);
+      setHasMore(source === "modrinth" && next.length >= PAGE_SIZE);
+      setMessage(term.trim() ? `${reset ? next.length : offset + next.length}개 표시` : "인기순");
     } catch (error) {
-      setResults([]);
+      if (reset) setResults([]);
+      setHasMore(false);
       setMessage(error instanceof Error ? error.message : "검색 실패");
     } finally {
       setBusy(false);
@@ -219,8 +239,19 @@ function ContentLibraryPanel({ profile, kind, onChange }: { profile: LauncherPro
 
   useEffect(() => {
     setQuery("");
-    void search("");
+    setHasMore(true);
+    void loadProjects("", true);
   }, [profile.id, kind, source]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && hasMore && !busy && source === "modrinth") void loadProjects(query, false);
+    }, { rootMargin: "160px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, busy, query, results.length, source]);
 
   const addFiles = (files: FileList | File[]) => {
     const nextFiles = Array.from(files).filter((file) => file.name.toLowerCase().endsWith(section.accept));
@@ -234,7 +265,7 @@ function ContentLibraryPanel({ profile, kind, onChange }: { profile: LauncherPro
     try {
       const asset = project.source === "modrinth"
         ? await getModrinthAsset(project, profile)
-        : { id: `curseforge-${project.projectId}`, name: project.title, version: profile.minecraftVersion, required: true, url: `curseforge://${project.projectId}` } satisfies LauncherAsset;
+        : { id: `curseforge-${project.projectId}`, name: project.title, version: profile.minecraftVersion, required: true, url: `curseforge://${project.projectId}`, source: "curseforge" as const, projectId: project.projectId } satisfies LauncherAsset;
       updateItems([...items, asset]);
       setMessage(`${project.title} 추가됨`);
     } catch (error) {
@@ -246,57 +277,74 @@ function ContentLibraryPanel({ profile, kind, onChange }: { profile: LauncherPro
 
   return <section className="launcher-content-surface">
     <h2 className="content-title-shot">{section.title}</h2>
-
-    <div className="installed-stack-shot">
-      {items.map((item, index) => <article className="installed-card-shot" key={`${item.id}-${index}`}>
-        <span className="green-dot" />
-        <div className="installed-info"><strong>{item.name}</strong><small>{item.version || "버전 없음"} · {item.required ? "필수" : "선택"}</small></div>
-        <Toggle label="" checked={item.required} onChange={() => updateItems(items.map((asset, i) => i === index ? { ...asset, required: !asset.required } : asset))} />
-        <button className="tiny-icon" type="button" onClick={() => updateItems(items.filter((_, i) => i !== index))}><X size={15} /></button>
-      </article>)}
-      {!items.length && <div className="empty-installed-shot"><span className="green-dot" />아직 적용된 {section.title} 없음</div>}
-    </div>
-
-    <div
-      className={`drop-zone-shot${dragging ? " dragging" : ""}`}
-      onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}
-    >
-      파일을 여기에 끌어다 놓으세요
-    </div>
-
-    <div className="library-actions-shot">
-      <input ref={inputRef} type="file" multiple accept={section.accept} hidden onChange={(event) => event.target.files && addFiles(event.target.files)} />
-      <button type="button" className="folder-button-shot" onClick={() => inputRef.current?.click()}><FolderPlus size={16} />폴더에서 추가</button>
-      <form className="library-search-shot" onSubmit={(event) => { event.preventDefault(); void search(query); }}>
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`${source === "modrinth" ? "Modrinth" : "CurseForge"} 검색`} />
-        <button disabled={busy}>{busy ? "..." : "검색"}</button>
-      </form>
-    </div>
-
-    <div className="source-heading-shot">
-      <div className="source-tabs-shot"><button className={source === "modrinth" ? "active" : ""} onClick={() => setSource("modrinth")}>Modrinth</button><button className={source === "curseforge" ? "active" : ""} onClick={() => setSource("curseforge")}>CurseForge</button></div>
-      <span>{message}</span>
-    </div>
-
-    <div className="project-list-shot">
-      {results.map((project) => {
-        const installed = items.some((asset) => asset.id === project.slug || asset.id === project.projectId || asset.id === `curseforge-${project.projectId}`);
-        return <article className="project-row-shot" key={`${project.source}-${project.projectId}`}>
-          {project.iconUrl ? <img src={project.iconUrl} alt="" /> : <span className="result-icon-shot"><Box size={18} /></span>}
-          <div><strong>{project.title}</strong><small>{project.author ?? project.source} · {project.follows ? `${project.follows.toLocaleString("ko-KR")} 팔로우` : "호환 파일 확인"}</small></div>
-          <button type="button" disabled={busy || installed} onClick={() => void addProject(project)}>{installed ? "설치됨" : "설치"}</button>
-        </article>;
-      })}
-    </div>
+    <div className="installed-stack-shot">{items.map((item, index) => <article className="installed-card-shot" key={`${item.id}-${index}`}><span className="green-dot" /><div className="installed-info"><strong>{item.name}</strong><small>{item.version || "버전 없음"} · {item.required ? "필수" : "선택"}</small></div><Toggle label="" checked={item.required} onChange={() => updateItems(items.map((asset, i) => i === index ? { ...asset, required: !asset.required } : asset))} /><button className="tiny-icon" type="button" onClick={() => updateItems(items.filter((_, i) => i !== index))}><X size={15} /></button></article>)}{!items.length && <div className="empty-installed-shot"><span className="green-dot" />아직 적용된 {section.title} 없음</div>}</div>
+    <div className={`drop-zone-shot${dragging ? " dragging" : ""}`} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}>파일을 여기에 끌어다 놓으세요</div>
+    <div className="library-actions-shot"><input ref={inputRef} type="file" multiple accept={section.accept} hidden onChange={(event) => event.target.files && addFiles(event.target.files)} /><button type="button" className="folder-button-shot" onClick={() => inputRef.current?.click()}><FolderPlus size={16} />폴더에서 추가</button><form className="library-search-shot" onSubmit={(event) => { event.preventDefault(); void loadProjects(query, true); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`${source === "modrinth" ? "Modrinth" : "CurseForge"} 검색`} /><button disabled={busy}>{busy ? "..." : "검색"}</button></form></div>
+    <div className="source-heading-shot"><div className="source-tabs-shot"><button className={source === "modrinth" ? "active" : ""} onClick={() => setSource("modrinth")}>Modrinth</button><button className={source === "curseforge" ? "active" : ""} onClick={() => setSource("curseforge")}>CurseForge</button></div><span>{message}</span></div>
+    <div className="project-list-shot">{results.map((project) => { const installed = items.some((asset) => asset.id === project.slug || asset.projectId === project.projectId || asset.id === `curseforge-${project.projectId}`); return <article className="project-row-shot" key={`${project.source}-${project.projectId}`}>
+      {project.iconUrl ? <img src={project.iconUrl} alt="" /> : <span className="result-icon-shot"><Box size={18} /></span>}<div><strong>{project.title}</strong><small>{project.author ?? project.source} · {project.follows ? `${project.follows.toLocaleString("ko-KR")} 인기` : "호환 파일 확인"}</small></div><button type="button" disabled={busy || installed} onClick={() => void addProject(project)}>{installed ? "설치됨" : "설치"}</button>
+    </article>; })}<div className="load-more-shot" ref={loadMoreRef}>{busy ? "불러오는 중..." : hasMore && source === "modrinth" ? "더 불러오는 중..." : results.length ? "끝" : "결과 없음"}</div></div>
   </section>;
+}
+
+function ModpackPicker({ onBack, onCreate }: { onBack: () => void; onCreate: (profile: LauncherProfile) => void }) {
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ExternalProject[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("인기 모드팩");
+  const [hasMore, setHasMore] = useState(true);
+
+  const load = async (term = query, reset = true) => {
+    if (busy) return;
+    setBusy(true);
+    const offset = reset ? 0 : results.length;
+    setMessage(term.trim() ? "검색 중..." : "인기 모드팩");
+    try {
+      const next = await searchModrinthProjects("modpack", term, offset, PAGE_SIZE);
+      setResults((current) => reset ? next : [...current, ...next.filter((item) => !current.some((old) => old.projectId === item.projectId))]);
+      setHasMore(next.length >= PAGE_SIZE);
+    } catch (error) {
+      if (reset) setResults([]);
+      setHasMore(false);
+      setMessage(error instanceof Error ? error.message : "검색 실패");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => { void load("", true); }, []);
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && hasMore && !busy) void load(query, false);
+    }, { rootMargin: "180px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, busy, query, results.length]);
+
+  const select = async (project: ExternalProject) => {
+    setBusy(true);
+    setMessage(".mrpack 분석 중...");
+    try {
+      const profile = await createProfileFromModrinthModpack(project);
+      onCreate(profile);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "모드팩 분석 실패");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return <section className="modpack-page-shot"><div className="home-title"><p className="eyebrow">Modpacks</p><h2>모드팩 선택</h2><span>{message}</span></div><form className="library-search-shot modpack-search" onSubmit={(event) => { event.preventDefault(); void load(query, true); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Modrinth 모드팩 검색" /><button disabled={busy}>{busy ? "..." : "검색"}</button></form><div className="project-list-shot modpack-list">{results.map((project) => <article className="project-row-shot" key={project.projectId}>{project.iconUrl ? <img src={project.iconUrl} alt="" /> : <span className="result-icon-shot"><Box size={18} /></span>}<div><strong>{project.title}</strong><small>{project.author ?? "Modrinth"} · 선택하면 내부 파일을 mods/resourcePacks/shaders로 분해</small></div><button disabled={busy} onClick={() => void select(project)}>선택</button></article>)}<div className="load-more-shot" ref={loadMoreRef}>{busy ? "불러오는 중..." : hasMore ? "더 불러오는 중..." : "끝"}</div></div><button className="ghost-button" onClick={onBack}>뒤로</button></section>;
 }
 
 export function ConsoleApp() {
   const [sessionReady, setSessionReady] = useState(Boolean(getSession()));
   const [profiles, setProfiles] = useState<ProfilesManifest>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [view, setView] = useState<View>("home");
   const [activeTab, setActiveTab] = useState<AssetKind>("shaders");
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState("서버 연결 대기 중");
@@ -312,6 +360,7 @@ export function ConsoleApp() {
     setProfiles(result.profiles);
     setSelectedId(result.profiles[0]?.id ?? "");
     setDirty(false);
+    setView("home");
     setStatus(result.source === "github" ? `GitHub에서 불러옴 · ${shortSha(result.sha)}` : "GITHUB_TOKEN 없음: 빈 manifest로 시작");
   };
 
@@ -325,12 +374,19 @@ export function ConsoleApp() {
     setDirty(true);
   };
 
-  const addProfile = () => {
+  const createCustomProfile = () => {
     const profile = createEmptyProfile();
     setProfiles((items) => [...items, profile]);
     setSelectedId(profile.id);
+    setView("editor");
     setDirty(true);
-    setTimeout(() => document.getElementById("profile-settings-section")?.scrollIntoView({ behavior: "smooth" }), 80);
+  };
+
+  const createModpackProfile = (profile: LauncherProfile) => {
+    setProfiles((items) => [...items, profile]);
+    setSelectedId(profile.id);
+    setView("editor");
+    setDirty(true);
   };
 
   const duplicate = () => {
@@ -340,6 +396,7 @@ export function ConsoleApp() {
     profile.name = `${selected.name} Copy`;
     setProfiles((items) => [...items, profile]);
     setSelectedId(profile.id);
+    setView("editor");
     setDirty(true);
   };
 
@@ -347,6 +404,7 @@ export function ConsoleApp() {
     if (!selected) return;
     setProfiles((items) => items.filter((item) => item.id !== selected.id));
     setSelectedId("");
+    setView("home");
     setDirty(true);
   };
 
@@ -378,37 +436,16 @@ export function ConsoleApp() {
 
   if (!sessionReady) return <LoginScreen onDone={() => setSessionReady(true)} />;
 
-  if (!selected) return <main className="app-v2 notion-bg">
-    <header className="topbar-v2"><div className="brand-line"><div className="brand-orb"><Settings2 /></div><div><p className="eyebrow">zzapcho Launcher</p><h1>Console</h1></div></div><button className="primary-button" onClick={addProfile}><Plus size={17} />새 프로필</button></header>
-    <div className="blank-state"><h2>프로필 없음</h2><p>새 프로필을 만들어 시작하세요.</p></div>
-  </main>;
-
   return <main className="app-v2 notion-bg">
-    <header className="topbar-v2">
-      <div className="brand-line"><div className="brand-orb"><Settings2 size={20} /></div><div className="brand-text"><p className="eyebrow">zzapcho Launcher</p><h1>Console <span>BETA</span></h1></div></div>
-      <div className="top-actions-v2">
-        {saveStatus && <div className={`save-toast ${saveStatus.type}`}>{saveStatus.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}<span>{saveStatus.message}</span>{saveStatus.sha && <code>{shortSha(saveStatus.sha)}</code>}</div>}
-        <button className="ghost-button hide-mobile" onClick={exportJson}><Copy size={16} />JSON</button>
-        <button className="primary-button" onClick={save} disabled={isSaving || !validation.ok}>{isSaving ? "저장 중" : <><Github size={17} />저장</>}</button>
-        <button className="mobile-menu-button" onClick={() => setMenuOpen(true)}><Menu /></button>
-      </div>
-    </header>
-
+    <TopBar view={view} dirty={dirty} saveStatus={saveStatus} isSaving={isSaving} canSave={validation.ok} onHome={() => setView("home")} onSave={save} onMenu={() => setMenuOpen(true)} />
     {menuOpen && <div className="mobile-sheet-backdrop" onClick={() => setMenuOpen(false)}><div className="mobile-sheet" onClick={(event) => event.stopPropagation()}><button className="sheet-close" onClick={() => setMenuOpen(false)}><X /></button><button onClick={exportJson}><Copy size={16} />JSON 복사</button><button onClick={() => { clearSession(); setSessionReady(false); }}><LogOut size={16} />나가기</button></div></div>}
 
-    <section className="profile-section-v2">
-      <div className="section-title-row"><h2><Box size={18} />프로필</h2><span>{profiles.length}개 · {dirty ? "수정됨" : "동기화됨"}</span></div>
-      <div className="profile-rail-v2"><button className="add-profile-card" onClick={addProfile}><Plus /><span>새 프로필</span></button>{profiles.map((profile) => <ProfileCard key={profile.id} profile={profile} active={profile.id === selected.id} onClick={() => setSelectedId(profile.id)} />)}</div>
-      <div className="quick-actions-v2"><button onClick={duplicate}>복제</button><button className="danger-text" onClick={remove}>삭제</button></div>
-    </section>
-
-    <div className="workspace-v2 launcher-style-workspace">
-      <ProfileSettings profile={selected} onChange={setProfile} />
-      <section className="content-column">
-        <div className="notion-card tab-shell-shot">{tabs.map((tab) => <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)}>{tab.label}<b>{selected[tab.id].length}</b></button>)}</div>
-        <ContentLibraryPanel profile={selected} kind={activeTab} onChange={setProfile} />
-      </section>
-      <aside className="validation-panel-v2"><div className="notion-card sticky-card"><div className="card-head-v2"><h3>{validation.ok ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}검증</h3><span className={validation.ok ? "state-ok" : "state-bad"}>{validation.ok ? "OK" : "ERROR"}</span></div>{validation.ok ? <p className="muted">저장 가능한 상태입니다.</p> : <ul className="errors-v2">{validation.errors.map((error) => <li key={error}>{error}</li>)}</ul>}<p className="status-box">{status}</p></div></aside>
-    </div>
+    {view === "home" && <HomeView profiles={profiles} onNew={() => setView("new")} onOpen={(id) => { setSelectedId(id); setView("editor"); }} />}
+    {view === "new" && <NewProfileChoice onCustom={createCustomProfile} onModpack={() => setView("modpack")} onBack={() => setView("home")} />}
+    {view === "modpack" && <ModpackPicker onBack={() => setView("new")} onCreate={createModpackProfile} />}
+    {view === "editor" && selected && <>
+      <section className="profile-section-v2"><div className="section-title-row"><h2><Box size={18} />{selected.name}</h2><span>{dirty ? "수정됨" : "동기화됨"}</span></div><div className="quick-actions-v2"><button onClick={duplicate}>복제</button><button className="danger-text" onClick={remove}>삭제</button></div></section>
+      <div className="workspace-v2 launcher-style-workspace"><ProfileSettings profile={selected} onChange={setProfile} /><section className="content-column"><div className="notion-card tab-shell-shot">{tabs.map((tab) => <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)}>{tab.label}<b>{selected[tab.id].length}</b></button>)}</div><ContentLibraryPanel profile={selected} kind={activeTab} onChange={setProfile} /></section><aside className="validation-panel-v2"><div className="notion-card sticky-card"><div className="card-head-v2"><h3>{validation.ok ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}검증</h3><span className={validation.ok ? "state-ok" : "state-bad"}>{validation.ok ? "OK" : "ERROR"}</span></div>{validation.ok ? <p className="muted">저장 가능한 상태입니다.</p> : <ul className="errors-v2">{validation.errors.map((error) => <li key={error}>{error}</li>)}</ul>}<p className="status-box">{status}</p></div></aside></div>
+    </>}
   </main>;
 }
