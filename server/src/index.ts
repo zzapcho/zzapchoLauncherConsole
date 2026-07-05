@@ -19,19 +19,19 @@ app.get("/api/health", (_req, res) => {
 
 app.post("/api/login", (req, res) => {
   const username = req.body?.username;
-  const password = req.body?.password;
-  if (typeof username !== "string" || typeof password !== "string") {
-    res.status(400).json({ error: "username and password are required" });
+  const secret = req.body?.secret;
+  if (typeof username !== "string" || typeof secret !== "string") {
+    res.status(400).json({ error: "username and secret are required" });
     return;
   }
 
-  const token = createSession(username, password);
-  if (!token) {
+  const session = createSession(username, secret);
+  if (!session) {
     res.status(401).json({ error: "invalid login" });
     return;
   }
 
-  res.json({ token });
+  res.json({ session });
 });
 
 app.get("/api/profiles", requireAdmin, async (_req, res) => {
