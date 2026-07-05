@@ -16,7 +16,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { clearSession, getSession, loadProfiles, login, saveProfiles } from "./api";
+import { clearSession, getSession, loadProfiles, login, saveProfiles, uploadAsset } from "./api";
 import {
   createEmptyProfile,
   MOD_LOADERS,
@@ -69,16 +69,11 @@ function safeId(value: string) {
 }
 
 function shortSha(value?: string | null) {
-  return value ? value.slice(0, 7) : "unknown";
+  return value ? value.slice(0, 7) : "local";
 }
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
-}
-
-function localAsset(file: File): LauncherAsset {
-  const name = file.name.replace(/\.(jar|zip)$/i, "");
-  return { id: safeId(name), name, version: "local", required: false, url: "", source: "manual", fileName: file.name };
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -90,6 +85,20 @@ function Toggle({ label, checked, onChange, lock }: { label: string; checked: bo
     <span className="toggle-label">{lock && <Lock size={13} />}{label}</span>
     <span className={`switch-track${checked ? " checked" : ""}`}><span /></span>
   </button>;
+}
+
+function ConfirmDeleteModal({ profile, onCancel, onConfirm }: { profile: LauncherProfile; onCancel: () => void; onConfirm: () => void }) {
+  const fileCount = profile.mods.length + profile.resourcePacks.length + profile.shaders.length;
+  return <div className="modal-backdrop-v2" onClick={onCancel}>
+    <section className="confirm-modal-v2" onClick={(event) => event.stopPropagation()}>
+      <div className="danger-orb"><Trash2 size={22} /></div>
+      <p className="eyebrow">Delete Profile</p>
+      <h2>정말로 삭제할까요?</h2>
+      <p className="muted"><b>{profile.name}</b> 프로필을 삭제합니다. 저장하면 이 프로필의 서버 업로드 파일 폴더도 함께 삭제됩니다.</p>
+      <div className="delete-summary-v2"><span>프로필 ID</span><code>{profile.id}</code><span>등록 파일</span><code>{fileCount}개</code></div>
+      <div className="modal-actions-v2"><button className="ghost-button" onClick={onCancel}>취소</button><button className="danger-button-v2" onClick={onConfirm}><Trash2 size={16} />삭제</button></div>
+    </section>
+  </div>;
 }
 
 function LoginScreen({ onDone }: { onDone: () => void }) {
@@ -253,10 +262,24 @@ function ContentLibraryPanel({ profile, kind, onChange }: { profile: LauncherPro
     return () => observer.disconnect();
   }, [hasMore, busy, query, results.length, source]);
 
-  const addFiles = (files: FileList | File[]) => {
+  const addFiles = async (files: FileList | File[]) => {
     const nextFiles = Array.from(files).filter((file) => file.name.toLowerCase().endsWith(section.accept));
-    if (!nextFiles.length) return;
-    updateItems([...items, ...nextFiles.map(localAsset)]);
+    if (!nextFiles.length) {
+      setMessage(`${section.accept} 파일만 추가할 수 있습니다.`);
+      return;
+    }
+    setBusy(true);
+    setMessage("서버에 업로드 중...");
+    try {
+      const uploaded: LauncherAsset[] = [];
+      for (const file of nextFiles) uploaded.push(await uploadAsset(profile.id, kind, file));
+      updateItems([...items, ...uploaded]);
+      setMessage(`${uploaded.length}개 파일 업로드 완료`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "업로드 실패");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const addProject = async (project: ExternalProject) => {
@@ -278,12 +301,10 @@ function ContentLibraryPanel({ profile, kind, onChange }: { profile: LauncherPro
   return <section className="launcher-content-surface">
     <h2 className="content-title-shot">{section.title}</h2>
     <div className="installed-stack-shot">{items.map((item, index) => <article className="installed-card-shot" key={`${item.id}-${index}`}><span className="green-dot" /><div className="installed-info"><strong>{item.name}</strong><small>{item.version || "버전 없음"} · {item.required ? "필수" : "선택"}</small></div><Toggle label="" checked={item.required} onChange={() => updateItems(items.map((asset, i) => i === index ? { ...asset, required: !asset.required } : asset))} /><button className="tiny-icon" type="button" onClick={() => updateItems(items.filter((_, i) => i !== index))}><X size={15} /></button></article>)}{!items.length && <div className="empty-installed-shot"><span className="green-dot" />아직 적용된 {section.title} 없음</div>}</div>
-    <div className={`drop-zone-shot${dragging ? " dragging" : ""}`} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}>파일을 여기에 끌어다 놓으세요</div>
-    <div className="library-actions-shot"><input ref={inputRef} type="file" multiple accept={section.accept} hidden onChange={(event) => event.target.files && addFiles(event.target.files)} /><button type="button" className="folder-button-shot" onClick={() => inputRef.current?.click()}><FolderPlus size={16} />폴더에서 추가</button><form className="library-search-shot" onSubmit={(event) => { event.preventDefault(); void loadProjects(query, true); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`${source === "modrinth" ? "Modrinth" : "CurseForge"} 검색`} /><button disabled={busy}>{busy ? "..." : "검색"}</button></form></div>
+    <div className={`drop-zone-shot${dragging ? " dragging" : ""}`} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); void addFiles(event.dataTransfer.files); }}>파일을 여기에 끌어다 놓으세요</div>
+    <div className="library-actions-shot"><input ref={inputRef} type="file" multiple accept={section.accept} hidden onChange={(event) => { if (event.target.files) void addFiles(event.target.files); event.currentTarget.value = ""; }} /><button type="button" className="folder-button-shot" onClick={() => inputRef.current?.click()}><FolderPlus size={16} />폴더에서 추가</button><form className="library-search-shot" onSubmit={(event) => { event.preventDefault(); void loadProjects(query, true); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`${source === "modrinth" ? "Modrinth" : "CurseForge"} 검색`} /><button disabled={busy}>{busy ? "..." : "검색"}</button></form></div>
     <div className="source-heading-shot"><div className="source-tabs-shot"><button className={source === "modrinth" ? "active" : ""} onClick={() => setSource("modrinth")}>Modrinth</button><button className={source === "curseforge" ? "active" : ""} onClick={() => setSource("curseforge")}>CurseForge</button></div><span>{message}</span></div>
-    <div className="project-list-shot">{results.map((project) => { const installed = items.some((asset) => asset.id === project.slug || asset.projectId === project.projectId || asset.id === `curseforge-${project.projectId}`); return <article className="project-row-shot" key={`${project.source}-${project.projectId}`}>
-      {project.iconUrl ? <img src={project.iconUrl} alt="" /> : <span className="result-icon-shot"><Box size={18} /></span>}<div><strong>{project.title}</strong><small>{project.author ?? project.source} · {project.follows ? `${project.follows.toLocaleString("ko-KR")} 인기` : "호환 파일 확인"}</small></div><button type="button" disabled={busy || installed} onClick={() => void addProject(project)}>{installed ? "설치됨" : "설치"}</button>
-    </article>; })}<div className="load-more-shot" ref={loadMoreRef}>{busy ? "불러오는 중..." : hasMore && source === "modrinth" ? "더 불러오는 중..." : results.length ? "끝" : "결과 없음"}</div></div>
+    <div className="project-list-shot">{results.map((project) => { const installed = items.some((asset) => asset.id === project.slug || asset.projectId === project.projectId || asset.id === `curseforge-${project.projectId}`); return <article className="project-row-shot" key={`${project.source}-${project.projectId}`}>{project.iconUrl ? <img src={project.iconUrl} alt="" /> : <span className="result-icon-shot"><Box size={18} /></span>}<div><strong>{project.title}</strong><small>{project.author ?? project.source} · {project.follows ? `${project.follows.toLocaleString("ko-KR")} 인기` : "호환 파일 확인"}</small></div><button type="button" disabled={busy || installed} onClick={() => void addProject(project)}>{installed ? "설치됨" : "설치"}</button></article>; })}<div className="load-more-shot" ref={loadMoreRef}>{busy ? "불러오는 중..." : hasMore && source === "modrinth" ? "더 불러오는 중..." : results.length ? "끝" : "결과 없음"}</div></div>
   </section>;
 }
 
@@ -351,6 +372,7 @@ export function ConsoleApp() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<LauncherProfile | null>(null);
   const selected = profiles.find((profile) => profile.id === selectedId) ?? profiles[0];
   const validation = useMemo(() => validateProfilesManifest(profiles), [profiles]);
 
@@ -361,7 +383,7 @@ export function ConsoleApp() {
     setSelectedId(result.profiles[0]?.id ?? "");
     setDirty(false);
     setView("home");
-    setStatus(result.source === "github" ? `GitHub에서 불러옴 · ${shortSha(result.sha)}` : "GITHUB_TOKEN 없음: 빈 manifest로 시작");
+    setStatus(result.source === "local" ? "서버 로컬 저장소에서 불러옴" : "아직 저장된 프로필 없음");
   };
 
   useEffect(() => {
@@ -400,12 +422,19 @@ export function ConsoleApp() {
     setDirty(true);
   };
 
-  const remove = () => {
+  const requestRemove = () => {
     if (!selected) return;
-    setProfiles((items) => items.filter((item) => item.id !== selected.id));
+    setDeleteTarget(selected);
+  };
+
+  const confirmRemove = () => {
+    if (!deleteTarget) return;
+    setProfiles((items) => items.filter((item) => item.id !== deleteTarget.id));
     setSelectedId("");
+    setDeleteTarget(null);
     setView("home");
     setDirty(true);
+    setStatus("프로필 삭제됨. 저장하면 서버 업로드 파일도 정리됩니다.");
   };
 
   const exportJson = () => {
@@ -419,11 +448,12 @@ export function ConsoleApp() {
       return;
     }
     setIsSaving(true);
-    setStatus("GitHub에 저장 중...");
+    setStatus("서버에 저장 중...");
     try {
       const result = await saveProfiles(profiles);
       setDirty(false);
-      setStatus(`저장 완료 · ${shortSha(result.sha)}`);
+      const deletedText = result.deletedProfileUploads ? ` · 삭제 프로필 파일 ${result.deletedProfileUploads}개 정리` : "";
+      setStatus(`서버 저장 완료${deletedText}`);
       setSaveStatus({ type: "success", message: "저장됨", sha: result.sha });
     } catch (error) {
       const message = error instanceof Error ? error.message : "저장 실패";
@@ -439,12 +469,13 @@ export function ConsoleApp() {
   return <main className="app-v2 notion-bg">
     <TopBar view={view} dirty={dirty} saveStatus={saveStatus} isSaving={isSaving} canSave={validation.ok} onHome={() => setView("home")} onSave={save} onMenu={() => setMenuOpen(true)} />
     {menuOpen && <div className="mobile-sheet-backdrop" onClick={() => setMenuOpen(false)}><div className="mobile-sheet" onClick={(event) => event.stopPropagation()}><button className="sheet-close" onClick={() => setMenuOpen(false)}><X /></button><button onClick={exportJson}><Copy size={16} />JSON 복사</button><button onClick={() => { clearSession(); setSessionReady(false); }}><LogOut size={16} />나가기</button></div></div>}
+    {deleteTarget && <ConfirmDeleteModal profile={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={confirmRemove} />}
 
     {view === "home" && <HomeView profiles={profiles} onNew={() => setView("new")} onOpen={(id) => { setSelectedId(id); setView("editor"); }} />}
     {view === "new" && <NewProfileChoice onCustom={createCustomProfile} onModpack={() => setView("modpack")} onBack={() => setView("home")} />}
     {view === "modpack" && <ModpackPicker onBack={() => setView("new")} onCreate={createModpackProfile} />}
     {view === "editor" && selected && <>
-      <section className="profile-section-v2"><div className="section-title-row"><h2><Box size={18} />{selected.name}</h2><span>{dirty ? "수정됨" : "동기화됨"}</span></div><div className="quick-actions-v2"><button onClick={duplicate}>복제</button><button className="danger-text" onClick={remove}>삭제</button></div></section>
+      <section className="profile-section-v2"><div className="section-title-row"><h2><Box size={18} />{selected.name}</h2><span>{dirty ? "수정됨" : "동기화됨"}</span></div><div className="quick-actions-v2"><button onClick={duplicate}>복제</button><button className="danger-text" onClick={requestRemove}>삭제</button></div></section>
       <div className="workspace-v2 launcher-style-workspace"><ProfileSettings profile={selected} onChange={setProfile} /><section className="content-column"><div className="notion-card tab-shell-shot">{tabs.map((tab) => <button key={tab.id} className={activeTab === tab.id ? "active" : ""} onClick={() => setActiveTab(tab.id)}>{tab.label}<b>{selected[tab.id].length}</b></button>)}</div><ContentLibraryPanel profile={selected} kind={activeTab} onChange={setProfile} /></section><aside className="validation-panel-v2"><div className="notion-card sticky-card"><div className="card-head-v2"><h3>{validation.ok ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}검증</h3><span className={validation.ok ? "state-ok" : "state-bad"}>{validation.ok ? "OK" : "ERROR"}</span></div>{validation.ok ? <p className="muted">저장 가능한 상태입니다.</p> : <ul className="errors-v2">{validation.errors.map((error) => <li key={error}>{error}</li>)}</ul>}<p className="status-box">{status}</p></div></aside></div>
     </>}
   </main>;
