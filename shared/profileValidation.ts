@@ -1,4 +1,4 @@
-import { MOD_LOADERS, type LauncherAsset, type ProfilesManifest } from "./profileTypes";
+import { MOD_LOADERS, type LauncherAsset, type ProfilesManifest } from "./profileTypes.js";
 
 export interface ValidationResult {
   ok: boolean;
