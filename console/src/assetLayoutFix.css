@@ -1,0 +1,59 @@
+.installed-card-shot:has(.update-icon-shot) {
+  grid-template-columns: 38px minmax(0, 1fr) 36px 48px 32px;
+  gap: 8px;
+}
+
+.installed-card-shot:not(:has(.update-icon-shot)) {
+  grid-template-columns: 38px minmax(0, 1fr) 48px 32px;
+  gap: 8px;
+}
+
+.installed-card-shot > .asset-icon-shot {
+  grid-column: 1;
+}
+
+.installed-card-shot > .installed-info {
+  grid-column: 2;
+}
+
+.installed-card-shot > .update-icon-shot {
+  grid-column: 3;
+}
+
+.installed-card-shot > .toggle-switch {
+  justify-self: center;
+}
+
+.installed-card-shot:has(.update-icon-shot) > .toggle-switch {
+  grid-column: 4;
+}
+
+.installed-card-shot:not(:has(.update-icon-shot)) > .toggle-switch {
+  grid-column: 3;
+}
+
+.installed-card-shot > .tiny-icon {
+  justify-self: end;
+}
+
+.installed-card-shot:has(.update-icon-shot) > .tiny-icon {
+  grid-column: 5;
+}
+
+.installed-card-shot:not(:has(.update-icon-shot)) > .tiny-icon {
+  grid-column: 4;
+}
+
+.update-icon-shot {
+  flex: 0 0 34px;
+}
+
+@media (max-width: 520px) {
+  .installed-card-shot:has(.update-icon-shot) {
+    grid-template-columns: 34px minmax(0, 1fr) 32px 42px 28px;
+  }
+
+  .installed-card-shot:not(:has(.update-icon-shot)) {
+    grid-template-columns: 34px minmax(0, 1fr) 42px 28px;
+  }
+}
