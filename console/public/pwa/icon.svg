@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="zzapcho Console">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#102817"/>
+      <stop offset="1" stop-color="#020b06"/>
+    </linearGradient>
+    <linearGradient id="z" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b9ffba"/>
+      <stop offset="1" stop-color="#47d56a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+  <circle cx="384" cy="106" r="76" fill="#7eef82" opacity="0.16"/>
+  <path d="M150 150h220v57L237 333h139v59H141v-57l134-126H150z" fill="url(#z)"/>
+  <path d="M124 404h264" stroke="#7eef82" stroke-width="18" stroke-linecap="round" opacity="0.72"/>
+</svg>
