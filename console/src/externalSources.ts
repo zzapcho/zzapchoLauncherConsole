@@ -235,6 +235,7 @@ function splitMrpackFile(file: MrpackIndexFile, version: string): { kind: "mods"
     sha512: file.hashes?.sha512,
     source: "modrinth" as const,
     fileName,
+    fromModpack: true,
   };
   if (lower.startsWith("mods/") && lower.endsWith(".jar")) return { kind: "mods", asset: common };
   if ((lower.startsWith("resourcepacks/") || lower.startsWith("resource-packs/")) && lower.endsWith(".zip")) return { kind: "resourcePacks", asset: common };
