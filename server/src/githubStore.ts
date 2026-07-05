@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { assertProfilesManifest, validateProfilesManifest } from "../../shared/profileValidation.js";
-import type { ProfilesManifest } from "../../shared/profileTypes.js";
+import { DEFAULT_EDITABLE_FIELDS, createEmptyProfile, guessJavaVersion, type LauncherProfile, type ProfilesManifest } from "../../shared/profileTypes.js";
 
 export interface ManifestReadResult {
   profiles: ProfilesManifest;
@@ -26,6 +26,64 @@ function githubHeaders(token: string) {
   };
 }
 
+function normalizeAsset(value: unknown) {
+  const item = typeof value === "object" && value ? value as Record<string, unknown> : {};
+  return {
+    id: typeof item.id === "string" ? item.id : `asset-${Date.now()}`,
+    name: typeof item.name === "string" ? item.name : "Unknown Asset",
+    version: typeof item.version === "string" ? item.version : "",
+    required: typeof item.required === "boolean" ? item.required : true,
+    url: typeof item.url === "string" ? item.url : "",
+    ...(typeof item.sha256 === "string" ? { sha256: item.sha256 } : {}),
+  };
+}
+
+function normalizeProfile(value: unknown, index: number): LauncherProfile {
+  const base = createEmptyProfile(index + 1);
+  const profile = typeof value === "object" && value ? value as Record<string, unknown> : {};
+  const minecraftVersion = typeof profile.minecraftVersion === "string" ? profile.minecraftVersion : base.minecraftVersion;
+  const javaVersion = typeof profile.javaVersion === "number" ? profile.javaVersion : typeof profile.javaVersion === "string" ? Number(profile.javaVersion) : guessJavaVersion(minecraftVersion);
+  const server = typeof profile.defaultServer === "object" && profile.defaultServer ? profile.defaultServer as Record<string, unknown> : {};
+  const editable = typeof profile.editableFields === "object" && profile.editableFields ? profile.editableFields as Record<string, unknown> : {};
+  const launchOptions = typeof profile.launchOptions === "object" && profile.launchOptions ? profile.launchOptions as Record<string, unknown> : {};
+
+  return {
+    ...base,
+    id: typeof profile.id === "string" ? profile.id : base.id,
+    name: typeof profile.name === "string" ? profile.name : base.name,
+    description: typeof profile.description === "string" ? profile.description : base.description,
+    customText: typeof profile.customText === "string" ? profile.customText : base.customText,
+    backgroundImage: typeof profile.backgroundImage === "string" ? profile.backgroundImage : base.backgroundImage,
+    accentColor: typeof profile.accentColor === "string" ? profile.accentColor : base.accentColor,
+    minecraftVersion,
+    javaVersion: Number.isFinite(javaVersion) ? javaVersion : guessJavaVersion(minecraftVersion),
+    modLoader: profile.modLoader === "vanilla" || profile.modLoader === "fabric" || profile.modLoader === "forge" || profile.modLoader === "quilt" ? profile.modLoader : base.modLoader,
+    modLoaderVersion: typeof profile.modLoaderVersion === "string" ? profile.modLoaderVersion : base.modLoaderVersion,
+    defaultServer: {
+      name: typeof server.name === "string" ? server.name : base.defaultServer.name,
+      address: typeof server.address === "string" ? server.address : base.defaultServer.address,
+      port: typeof server.port === "number" ? server.port : base.defaultServer.port,
+    },
+    mods: Array.isArray(profile.mods) ? profile.mods.map(normalizeAsset) : [],
+    resourcePacks: Array.isArray(profile.resourcePacks) ? profile.resourcePacks.map(normalizeAsset) : [],
+    shaders: Array.isArray(profile.shaders) ? profile.shaders.map(normalizeAsset) : [],
+    editableFields: {
+      ...DEFAULT_EDITABLE_FIELDS,
+      ...Object.fromEntries(Object.entries(editable).filter(([, item]) => typeof item === "boolean")),
+    },
+    launchOptions: {
+      minMemoryMb: typeof launchOptions.minMemoryMb === "number" ? launchOptions.minMemoryMb : base.launchOptions.minMemoryMb,
+      maxMemoryMb: typeof launchOptions.maxMemoryMb === "number" ? launchOptions.maxMemoryMb : base.launchOptions.maxMemoryMb,
+      javaArgs: Array.isArray(launchOptions.javaArgs) ? launchOptions.javaArgs.filter((item): item is string => typeof item === "string") : [],
+    },
+  };
+}
+
+function normalizeManifest(value: unknown): ProfilesManifest {
+  if (!Array.isArray(value)) return [];
+  return value.map(normalizeProfile);
+}
+
 export async function readManifest(): Promise<ManifestReadResult> {
   const config = getGithubConfig();
   if (!config.token) return { profiles: [], sha: null, source: "empty" };
@@ -43,17 +101,13 @@ export async function readManifest(): Promise<ManifestReadResult> {
 
   const json = Buffer.from(payload.content, "base64").toString("utf8");
   const parsed = JSON.parse(json) as unknown;
-  const profiles = assertProfilesManifest(parsed);
-  return { profiles, sha: payload.sha ?? null, source: "github" };
+  const profiles = normalizeManifest(parsed);
+  return { profiles: assertProfilesManifest(profiles), sha: payload.sha ?? null, source: "github" };
 }
 
 export async function writeManifest(profiles: unknown): Promise<{ sha: string | null }> {
   const validation = validateProfilesManifest(profiles);
-  if (!validation.ok) {
-    const error = new Error("Manifest validation failed.");
-    error.name = validation.errors.join("\n");
-    throw error;
-  }
+  if (!validation.ok) throw new Error(validation.errors.join("\n"));
 
   const config = getGithubConfig();
   if (!config.token) throw new Error("GITHUB_TOKEN is missing. Configure server/.env first.");
