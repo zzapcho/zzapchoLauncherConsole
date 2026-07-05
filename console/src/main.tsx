@@ -11,6 +11,7 @@ import "./assetLayoutFix.css";
 import "./mobile.css";
 import "./mobileEditorTabs.css";
 import "./profileOrder.css";
+import "./mobileComfort.css";
 
 registerPwa();
 
