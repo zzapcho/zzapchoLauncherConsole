@@ -72,6 +72,10 @@
   }
 
   .asset-clean-surface .library-actions-shot {
+    position: static !important;
+    top: auto !important;
+    z-index: auto !important;
+    order: 1;
     display: grid !important;
     grid-template-columns: 96px minmax(0, 1fr) !important;
     align-items: stretch;
