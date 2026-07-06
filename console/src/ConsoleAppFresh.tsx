@@ -6,15 +6,15 @@ import { createProfileFromModrinthModpack, getModrinthAsset, searchCurseForgePro
 
 type AssetKind = "mods" | "resourcePacks" | "shaders";
 type View = "home" | "new" | "editor" | "modpack";
-
 type Toast = { tone: "ok" | "warn" | "bad"; text: string } | null;
+type CurseForgeProject = ExternalProject & { fileId?: string; fileName?: string; fileVersion?: string; downloadUrl?: string; sha1?: string; sha256?: string };
 
 const AUTOSAVE_DELAY = 900;
 const PAGE_SIZE = 12;
-const assetTabs: Array<{ id: AssetKind; label: string; kind: ProjectKind; accept: string }> = [
-  { id: "mods", label: "모드", kind: "mod", accept: ".jar" },
-  { id: "resourcePacks", label: "리팩", kind: "resourcepack", accept: ".zip" },
-  { id: "shaders", label: "쉐이더", kind: "shader", accept: ".zip" },
+const assetTabs: Array<{ id: AssetKind; label: string; kind: ProjectKind; accept: string; fallbackQuery: string }> = [
+  { id: "mods", label: "모드", kind: "mod", accept: ".jar", fallbackQuery: "performance" },
+  { id: "resourcePacks", label: "리팩", kind: "resourcepack", accept: ".zip", fallbackQuery: "faithful" },
+  { id: "shaders", label: "쉐이더", kind: "shader", accept: ".zip", fallbackQuery: "shader" },
 ];
 const editableLabels: Array<[keyof LauncherProfile["editableFields"], string]> = [
   ["mods", "모드"],
@@ -71,12 +71,41 @@ function countAssets(profile: LauncherProfile) {
 function javaLabel(profile: LauncherProfile) {
   return `자동: Java ${profile.javaVersion}`;
 }
+function curseForgePage(slugOrId: string) {
+  return `https://www.curseforge.com/minecraft/search?search=${encodeURIComponent(slugOrId)}`;
+}
+function curseForgeAsset(project: CurseForgeProject, kind: AssetKind): LauncherAsset {
+  const defaultExt = kind === "mods" ? ".jar" : ".zip";
+  const fileName = project.fileName ?? `${project.slug || project.projectId}${defaultExt}`;
+  return {
+    id: `curseforge-${project.projectId}`,
+    name: project.title,
+    version: project.fileVersion ?? fileName,
+    required: true,
+    url: project.downloadUrl ?? `curseforge://${project.projectId}/${project.fileId ?? "latest"}`,
+    sha1: project.sha1,
+    sha256: project.sha256,
+    source: "curseforge",
+    projectId: project.projectId,
+    fileId: project.fileId,
+    fileName,
+    iconUrl: project.iconUrl,
+    projectUrl: curseForgePage(project.slug ?? project.projectId),
+  };
+}
+function isModpackAsset(asset: LauncherAsset) {
+  return Boolean(asset.fromModpack);
+}
+function mergeModpackAssets(current: LauncherAsset[], updated: LauncherAsset[]) {
+  const manual = current.filter((asset) => !isModpackAsset(asset));
+  return [...updated.map((asset) => ({ ...asset, fromModpack: true })), ...manual];
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="fc-field"><span>{label}</span>{children}</label>;
 }
 function Toggle({ checked, label, onChange }: { checked: boolean; label: string; onChange: () => void }) {
-  return <button type="button" className={`fc-toggle ${checked ? "on" : ""}`} onClick={onChange}><span>{label}</span><b /></button>;
+  return <button type="button" className={`fc-toggle ${checked ? "on" : ""} ${label ? "" : "icon-only"}`} onClick={onChange}><span>{label}</span><b /></button>;
 }
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return <section className="fc-section"><div className="fc-section-head"><h3>{title}</h3>{hint && <small>{hint}</small>}</div>{children}</section>;
@@ -111,7 +140,7 @@ function Home({ profiles, reorder, onToggleReorder, onOpen, onNew, onMove }: { p
   return <main className="fc-page"><div className="fc-title-row"><div><p>Profiles</p><h2>프로필</h2></div><div className="fc-title-actions"><span>{profiles.length}개</span><button className="fc-soft" onClick={onToggleReorder}>{reorder ? "완료" : "위치 변경"}</button></div></div><div className="fc-profile-grid">{profiles.map((profile, index) => <article key={profile.id} className="fc-profile-card" style={{ "--accent": profile.accentColor } as React.CSSProperties}><button disabled={reorder} onClick={() => onOpen(profile.id)}><i /><strong>{profile.name}</strong><p>{profile.customText || profile.description || "프로필 설명 없음"}</p><span>MC {profile.minecraftVersion}</span><span>{profile.modLoader}</span><span>{countAssets(profile)} files</span></button>{reorder && <div className="fc-reorder"><button disabled={index === 0} onClick={() => onMove(index, -1)}>위</button><button disabled={index === profiles.length - 1} onClick={() => onMove(index, 1)}>아래</button></div>}</article>)}{!reorder && <button className="fc-add-card" onClick={onNew}>+ 새 프로필</button>}</div></main>;
 }
 
-function ProfileSettings({ profile, meta, onChange, onDuplicate, onDelete, onUpdateModpack }: { profile: LauncherProfile; meta: LauncherMeta | null; onChange: (profile: LauncherProfile) => void; onDuplicate: () => void; onDelete: () => void; onUpdateModpack: () => void }) {
+function ProfileSettings({ profile, meta, onChange, onDuplicate, onDelete, onUpdateModpack }: { profile: LauncherProfile; meta: LauncherMeta | null; onChange: (profile: LauncherProfile) => void; onUpdateModpack: () => void; onDuplicate: () => void; onDelete: () => void }) {
   function update(patch: Partial<LauncherProfile>) {
     onChange(normalizeProfile({ ...profile, ...patch }));
   }
@@ -145,7 +174,8 @@ function AssetPanel({ profile, kind, onChange }: { profile: LauncherProfile; kin
     setBusy(true);
     setMessage(term.trim() ? "검색 중..." : "인기순 불러오는 중...");
     try {
-      const next = source === "modrinth" ? await searchModrinthProjects(config.kind, term, 0, PAGE_SIZE) : await searchCurseForgeProjects(config.kind, term || config.label);
+      const searchTerm = source === "curseforge" && !term.trim() ? config.fallbackQuery : term;
+      const next = source === "modrinth" ? await searchModrinthProjects(config.kind, searchTerm, 0, PAGE_SIZE) : await searchCurseForgeProjects(config.kind, searchTerm);
       setResults(next);
       setMessage(next.length ? `${next.length}개 표시` : "결과 없음");
     } catch (error) {
@@ -160,9 +190,14 @@ function AssetPanel({ profile, kind, onChange }: { profile: LauncherProfile; kin
     setBusy(true);
     setMessage("파일 확인 중...");
     try {
-      const asset = project.source === "modrinth" ? await getModrinthAsset(project, profile) : { id: `curseforge-${project.projectId}`, name: project.title, version: profile.minecraftVersion, required: true, url: `curseforge://${project.projectId}`, source: "curseforge" as const, projectId: project.projectId, iconUrl: project.iconUrl } satisfies LauncherAsset;
+      const asset = project.source === "modrinth" ? await getModrinthAsset(project, profile) : curseForgeAsset(project as CurseForgeProject, kind);
+      const exists = items.some((item) => item.id === asset.id || (asset.projectId && item.projectId === asset.projectId));
+      if (exists) {
+        setMessage("이미 설치됨");
+        return;
+      }
       updateItems([...items, asset]);
-      setMessage("추가됨");
+      setMessage(asset.url.startsWith("curseforge://") ? "추가됨 · 다운로드 URL 없음" : "추가됨");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "추가 실패");
     } finally {
@@ -184,7 +219,7 @@ function AssetPanel({ profile, kind, onChange }: { profile: LauncherProfile; kin
       setBusy(false);
     }
   }
-  return <section className="fc-assets"><div className="fc-assets-head"><h3>{config.label}</h3><span>{message}</span></div><div className="fc-installed">{items.length ? items.map((asset, index) => <article key={`${asset.id}-${index}`} className="fc-asset-row"><div>{asset.iconUrl ? <img src={asset.iconUrl} alt="" /> : <b />}</div><main><strong>{asset.name}</strong><small>{asset.version || asset.fileName || asset.source || "버전 없음"}</small></main><Toggle label="" checked={asset.required} onChange={() => updateItems(items.map((item, i) => i === index ? { ...item, required: !item.required } : item))} /><button className="fc-icon-btn small" onClick={() => updateItems(items.filter((_, i) => i !== index))}>×</button></article>) : <div className="fc-empty">아직 추가된 파일 없음</div>}</div><div className="fc-library-bar"><input ref={inputRef} type="file" hidden multiple accept={config.accept} onChange={(event) => { void addFiles(event.currentTarget.files); event.currentTarget.value = ""; }} /><button className="fc-soft" onClick={() => inputRef.current?.click()}>업로드</button><form onSubmit={(event) => { event.preventDefault(); void search(); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`${source === "modrinth" ? "Modrinth" : "CurseForge"} 검색`} /><button disabled={busy}>{busy ? "..." : "검색"}</button></form></div><div className="fc-source-tabs"><button className={source === "modrinth" ? "active" : ""} onClick={() => setSource("modrinth")}>Modrinth</button><button className={source === "curseforge" ? "active" : ""} onClick={() => setSource("curseforge")}>CurseForge</button></div><div className="fc-results">{results.map((project) => { const installed = items.some((asset) => asset.id === project.slug || asset.projectId === project.projectId); return <article key={`${project.source}-${project.projectId}`} className="fc-result-row"><div>{project.iconUrl ? <img src={project.iconUrl} alt="" /> : <b />}</div><main><strong>{project.title}</strong><small>{project.author ?? project.source} · {project.follows ? `${project.follows.toLocaleString("ko-KR")} 인기` : "호환 파일 확인"}</small></main><button disabled={busy || installed} onClick={() => void addProject(project)}>{installed ? "설치됨" : "설치"}</button></article>; })}</div></section>;
+  return <section className="fc-assets"><div className="fc-assets-head"><h3>{config.label}</h3><span>{message}</span></div><div className="fc-installed">{items.length ? items.map((asset, index) => <article key={`${asset.id}-${index}`} className="fc-asset-row"><div>{asset.iconUrl ? <img src={asset.iconUrl} alt="" /> : <b />}</div><main><strong>{asset.name}</strong><small>{asset.version || asset.fileName || asset.source || "버전 없음"}</small></main><Toggle label="" checked={asset.required} onChange={() => updateItems(items.map((item, i) => i === index ? { ...item, required: !item.required } : item))} /><button className="fc-icon-btn small" onClick={() => updateItems(items.filter((_, i) => i !== index))}>×</button></article>) : <div className="fc-empty">아직 추가된 파일 없음</div>}</div><div className="fc-library-bar"><input ref={inputRef} type="file" hidden multiple accept={config.accept} onChange={(event) => { void addFiles(event.currentTarget.files); event.currentTarget.value = ""; }} /><button className="fc-soft" onClick={() => inputRef.current?.click()}>업로드</button><form onSubmit={(event) => { event.preventDefault(); void search(); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`${source === "modrinth" ? "Modrinth" : "CurseForge"} 검색`} /><button disabled={busy}>{busy ? "..." : "검색"}</button></form></div><div className="fc-source-tabs"><button className={source === "modrinth" ? "active" : ""} onClick={() => setSource("modrinth")}>Modrinth</button><button className={source === "curseforge" ? "active" : ""} onClick={() => setSource("curseforge")}>CurseForge</button></div><div className="fc-results">{results.map((project) => { const installed = items.some((asset) => asset.id === project.slug || asset.projectId === project.projectId || asset.id === `curseforge-${project.projectId}`); const cf = project as CurseForgeProject; return <article key={`${project.source}-${project.projectId}`} className="fc-result-row"><div>{project.iconUrl ? <img src={project.iconUrl} alt="" /> : <b />}</div><main><strong>{project.title}</strong><small>{project.author ?? project.source} · {cf.fileName ?? (project.follows ? `${project.follows.toLocaleString("ko-KR")} 인기` : "호환 파일 확인")}</small></main><button disabled={busy || installed} onClick={() => void addProject(project)}>{installed ? "설치됨" : "설치"}</button></article>; })}</div></section>;
 }
 
 function ModpackPicker({ onBack, onCreate }: { onBack: () => void; onCreate: (profile: LauncherProfile) => void }) {
@@ -233,8 +268,14 @@ export function ConsoleAppFresh() {
   const [reorder, setReorder] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<LauncherProfile | null>(null);
   const timer = useRef<number | null>(null);
+  const changeId = useRef(0);
   const selected = useMemo(() => profiles.find((profile) => profile.id === selectedId) ?? profiles[0], [profiles, selectedId]);
   const saveState = saving ? "자동 저장 중" : dirty ? "변경됨" : "저장됨";
+
+  function markChanged() {
+    changeId.current += 1;
+    setDirty(true);
+  }
 
   useEffect(() => { void loadLauncherMeta().then(setMeta).catch(() => undefined); }, []);
   useEffect(() => { if (selected?.minecraftVersion) void loadLauncherMeta(selected.minecraftVersion).then(setMeta).catch(() => undefined); }, [selected?.minecraftVersion]);
@@ -258,12 +299,15 @@ export function ConsoleAppFresh() {
   }, [profiles, dirty, ready, saving]);
 
   async function saveNow() {
+    const saveId = changeId.current;
+    const snapshot = normalizeProfiles(profiles);
     setSaving(true);
     try {
-      await saveProfiles(normalizeProfiles(profiles));
-      setDirty(false);
+      await saveProfiles(snapshot);
+      if (changeId.current === saveId) setDirty(false);
       setToast({ tone: "ok", text: "저장됨" });
     } catch (error) {
+      setDirty(true);
       setToast({ tone: "bad", text: error instanceof Error ? error.message : "저장 실패" });
     } finally {
       setSaving(false);
@@ -273,7 +317,7 @@ export function ConsoleAppFresh() {
     const next = normalizeProfile(profile);
     setProfiles((items) => items.map((item) => item.id === next.id ? next : item));
     setSelectedId(next.id);
-    setDirty(true);
+    markChanged();
   }
   function makeCustom() {
     const profile = normalizeProfile(createEmptyProfile());
@@ -285,14 +329,14 @@ export function ConsoleAppFresh() {
     setProfiles((items) => [...items, profile]);
     setSelectedId(profile.id);
     setView("editor");
-    setDirty(true);
+    markChanged();
   }
   function makeModpack(profile: LauncherProfile) {
     const next = normalizeProfile(profile);
     setProfiles((items) => [...items, next]);
     setSelectedId(next.id);
     setView("editor");
-    setDirty(true);
+    markChanged();
   }
   function duplicate() {
     if (!selected) return;
@@ -301,7 +345,7 @@ export function ConsoleAppFresh() {
     copy.name = `${selected.name} Copy`;
     setProfiles((items) => [...items, copy]);
     setSelectedId(copy.id);
-    setDirty(true);
+    markChanged();
   }
   function removeSelected() {
     if (!deleteTarget) return;
@@ -309,7 +353,7 @@ export function ConsoleAppFresh() {
     setDeleteTarget(null);
     setSelectedId("");
     setView("home");
-    setDirty(true);
+    markChanged();
   }
   function moveProfile(index: number, offset: -1 | 1) {
     const target = index + offset;
@@ -317,9 +361,41 @@ export function ConsoleAppFresh() {
     const next = [...profiles];
     [next[index], next[target]] = [next[target], next[index]];
     setProfiles(next);
-    setDirty(true);
+    markChanged();
+  }
+  async function updateSelectedModpack() {
+    if (!selected?.modpack) return;
+    if (selected.modpack.source !== "modrinth") {
+      setToast({ tone: "warn", text: "CurseForge 모드팩 업데이트는 아직 준비 중" });
+      return;
+    }
+    setToast({ tone: "warn", text: "모드팩 업데이트 중..." });
+    try {
+      const updated = normalizeProfile(await createProfileFromModrinthModpack({
+        source: "modrinth",
+        projectId: selected.modpack.projectId,
+        slug: selected.modpack.slug,
+        title: selected.modpack.title,
+        description: selected.description,
+        projectType: "modpack",
+      }));
+      setProfile({
+        ...selected,
+        minecraftVersion: updated.minecraftVersion,
+        javaVersion: updated.javaVersion,
+        modLoader: updated.modLoader,
+        modLoaderVersion: updated.modLoaderVersion,
+        modpack: updated.modpack ?? selected.modpack,
+        mods: mergeModpackAssets(selected.mods, updated.mods),
+        resourcePacks: mergeModpackAssets(selected.resourcePacks, updated.resourcePacks),
+        shaders: mergeModpackAssets(selected.shaders, updated.shaders),
+      });
+      setToast({ tone: "ok", text: "모드팩 업데이트됨" });
+    } catch (error) {
+      setToast({ tone: "bad", text: error instanceof Error ? error.message : "모드팩 업데이트 실패" });
+    }
   }
 
   if (!ready) return <Login onDone={() => setReady(true)} />;
-  return <div id="fresh-console" className="fc-shell"><Header status={saveState} onHome={() => { setView("home"); setMenu(false); }} onMenu={() => setMenu(true)} />{menu && <div className="fc-backdrop" onClick={() => setMenu(false)}><div className="fc-menu" onClick={(event) => event.stopPropagation()}><div><strong>메뉴</strong><button onClick={() => setMenu(false)}>×</button></div><button onClick={() => { setView("home"); setReorder((value) => !value); setMenu(false); }}>위치 변경 {reorder ? "끄기" : "켜기"}</button><button onClick={() => { void navigator.clipboard.writeText(JSON.stringify(normalizeProfiles(profiles), null, 2)); setToast({ tone: "ok", text: "JSON 복사됨" }); setMenu(false); }}>JSON 복사</button><button onClick={() => { setMenu(false); void reload(); }}>다시 불러오기</button><button className="danger" onClick={() => { clearSession(); setReady(false); }}>로그아웃</button></div></div>}{deleteTarget && <div className="fc-backdrop" onClick={() => setDeleteTarget(null)}><div className="fc-confirm" onClick={(event) => event.stopPropagation()}><h3>삭제할까?</h3><p>{deleteTarget.name} 프로필을 삭제합니다. 자동 저장 후 업로드 폴더도 정리됩니다.</p><div><button className="fc-soft" onClick={() => setDeleteTarget(null)}>취소</button><button className="fc-danger" onClick={removeSelected}>삭제</button></div></div></div>}{view === "home" && <Home profiles={profiles} reorder={reorder} onToggleReorder={() => setReorder((value) => !value)} onOpen={(id) => { setSelectedId(id); setView("editor"); }} onNew={() => setView("new")} onMove={moveProfile} />}{view === "new" && <main className="fc-page"><div className="fc-title-row"><div><p>Create</p><h2>새 프로필</h2></div><button className="fc-soft" onClick={() => setView("home")}>뒤로</button></div><div className="fc-choice"><button onClick={makeCustom}><strong>커스텀</strong><span>직접 버전/로더/파일을 구성</span></button><button onClick={() => setView("modpack")}><strong>모드팩</strong><span>Modrinth 모드팩에서 자동 생성</span></button></div></main>}{view === "modpack" && <ModpackPicker onBack={() => setView("new")} onCreate={makeModpack} />}{view === "editor" && selected && <main className="fc-editor" style={{ "--accent": selected.accentColor } as React.CSSProperties}><div className="fc-editor-title"><div><p>Profile</p><h2>{selected.name}</h2></div><span>{saveState}</span></div><div className="fc-editor-grid"><ProfileSettings profile={selected} meta={meta} onChange={setProfile} onDuplicate={duplicate} onDelete={() => setDeleteTarget(selected)} onUpdateModpack={() => setToast({ tone: "warn", text: "모드팩 업데이트는 다음 단계에서 다시 붙일게" })} /><section className="fc-main-panel"><nav className="fc-tabs">{assetTabs.map((item) => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>{item.label}<b>{selected[item.id].length}</b></button>)}</nav><AssetPanel profile={selected} kind={tab} onChange={setProfile} /></section></div></main>}{toast && <div className={`fc-toast ${toast.tone}`} onClick={() => setToast(null)}>{toast.text}</div>}</div>;
+  return <div id="fresh-console" className="fc-shell"><Header status={saveState} onHome={() => { setView("home"); setMenu(false); }} onMenu={() => setMenu(true)} />{menu && <div className="fc-backdrop" onClick={() => setMenu(false)}><div className="fc-menu" onClick={(event) => event.stopPropagation()}><div><strong>메뉴</strong><button onClick={() => setMenu(false)}>×</button></div><button onClick={() => { setView("home"); setReorder((value) => !value); setMenu(false); }}>위치 변경 {reorder ? "끄기" : "켜기"}</button><button onClick={() => { void navigator.clipboard.writeText(JSON.stringify(normalizeProfiles(profiles), null, 2)); setToast({ tone: "ok", text: "JSON 복사됨" }); setMenu(false); }}>JSON 복사</button><button onClick={() => { setMenu(false); void reload(); }}>다시 불러오기</button><button className="danger" onClick={() => { clearSession(); setReady(false); }}>로그아웃</button></div></div>}{deleteTarget && <div className="fc-backdrop" onClick={() => setDeleteTarget(null)}><div className="fc-confirm" onClick={(event) => event.stopPropagation()}><h3>삭제할까?</h3><p>{deleteTarget.name} 프로필을 삭제합니다. 자동 저장 후 업로드 폴더도 정리됩니다.</p><div><button className="fc-soft" onClick={() => setDeleteTarget(null)}>취소</button><button className="fc-danger" onClick={removeSelected}>삭제</button></div></div></div>}{view === "home" && <Home profiles={profiles} reorder={reorder} onToggleReorder={() => setReorder((value) => !value)} onOpen={(id) => { setSelectedId(id); setView("editor"); }} onNew={() => setView("new")} onMove={moveProfile} />}{view === "new" && <main className="fc-page"><div className="fc-title-row"><div><p>Create</p><h2>새 프로필</h2></div><button className="fc-soft" onClick={() => setView("home")}>뒤로</button></div><div className="fc-choice"><button onClick={makeCustom}><strong>커스텀</strong><span>직접 버전/로더/파일을 구성</span></button><button onClick={() => setView("modpack")}><strong>모드팩</strong><span>Modrinth 모드팩에서 자동 생성</span></button></div></main>}{view === "modpack" && <ModpackPicker onBack={() => setView("new")} onCreate={makeModpack} />}{view === "editor" && selected && <main className="fc-editor" style={{ "--accent": selected.accentColor } as React.CSSProperties}><div className="fc-editor-title"><div><p>Profile</p><h2>{selected.name}</h2></div><span>{saveState}</span></div><div className="fc-editor-grid"><ProfileSettings profile={selected} meta={meta} onChange={setProfile} onDuplicate={duplicate} onDelete={() => setDeleteTarget(selected)} onUpdateModpack={() => void updateSelectedModpack()} /><section className="fc-main-panel"><nav className="fc-tabs">{assetTabs.map((item) => <button key={item.id} className={tab === item.id ? "active" : ""} onClick={() => setTab(item.id)}>{item.label}<b>{selected[item.id].length}</b></button>)}</nav><AssetPanel profile={selected} kind={tab} onChange={setProfile} /></section></div></main>}{toast && <div className={`fc-toast ${toast.tone}`} onClick={() => setToast(null)}>{toast.text}</div>}</div>;
 }
