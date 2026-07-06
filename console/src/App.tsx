@@ -1,5 +1,6 @@
-import { ConsoleApp } from "./ConsoleApp";
+import { ConsoleAppFresh } from "./ConsoleAppFresh";
+import "./freshConsole.css";
 
 export function App() {
-  return <ConsoleApp />;
+  return <ConsoleAppFresh />;
 }
