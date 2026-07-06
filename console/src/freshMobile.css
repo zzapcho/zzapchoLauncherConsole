@@ -1,31 +1,47 @@
 @media (max-width: 860px) {
   #fresh-console {
+    --m-bg: #080a0f;
+    --m-card: #101722;
+    --m-card-2: #131b27;
+    --m-input: #0c1119;
+    --m-line: rgba(255, 255, 255, 0.095);
+    --m-line-strong: rgba(255, 255, 255, 0.16);
+    --m-text: #f4f7fb;
+    --m-muted: #98a3b3;
     min-height: 100svh;
-    background: #080a0f;
+    background: var(--m-bg);
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
   }
 
   #fresh-console .fc-shell {
     min-height: 100svh;
-    padding-bottom: calc(92px + env(safe-area-inset-bottom));
-  }
-
-  #fresh-console .fc-shell:has(.fc-editor) {
-    padding-bottom: calc(118px + env(safe-area-inset-bottom));
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
   }
 
   #fresh-console .fc-header {
+    position: sticky;
+    top: 0;
     min-height: 64px;
     padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(8, 10, 15, 0.86);
-    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.075);
+    background: rgba(8, 10, 15, 0.9);
+    backdrop-filter: blur(22px);
   }
 
   #fresh-console .fc-logo {
     font-size: 1.28rem;
     letter-spacing: -0.055em;
+  }
+
+  #fresh-console .fc-save-state {
+    display: inline-flex;
+    max-width: 88px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    padding: 7px 9px;
+    font-size: 0.68rem;
   }
 
   #fresh-console .fc-icon-btn,
@@ -34,10 +50,12 @@
   #fresh-console .fc-danger,
   #fresh-console .fc-library-bar button,
   #fresh-console .fc-result-row button,
-  #fresh-console .fc-reorder button {
+  #fresh-console .fc-reorder button,
+  #fresh-console .fc-source-tabs button,
+  #fresh-console .fc-tabs button {
     min-height: 44px;
     border-radius: 14px;
-    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, opacity 160ms ease;
+    transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, opacity 150ms ease;
   }
 
   #fresh-console button:active {
@@ -48,22 +66,23 @@
   #fresh-console .fc-editor {
     width: calc(100% - 20px);
     margin-top: 14px;
-    animation: fc-mobile-in 220ms ease both;
+    animation: fc-mobile-page-in 220ms ease both;
   }
 
   #fresh-console .fc-title-row,
   #fresh-console .fc-editor-title {
     align-items: flex-start;
+    gap: 10px;
     margin-bottom: 12px;
   }
 
   #fresh-console .fc-title-row h2,
   #fresh-console .fc-editor-title h2 {
-    max-width: 72vw;
+    max-width: 70vw;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 1.5rem;
+    font-size: 1.48rem;
   }
 
   #fresh-console .fc-title-row p,
@@ -73,6 +92,7 @@
   }
 
   #fresh-console .fc-title-actions {
+    flex-shrink: 0;
     gap: 6px;
   }
 
@@ -80,10 +100,15 @@
   #fresh-console .fc-editor-title > span {
     min-height: 36px;
     padding: 9px 10px;
+    border-radius: 999px;
     font-size: 0.72rem;
   }
 
-  #fresh-console .fc-profile-grid {
+  #fresh-console .fc-profile-grid,
+  #fresh-console .fc-choice,
+  #fresh-console .fc-editor-grid,
+  #fresh-console .fc-two,
+  #fresh-console .fc-manage {
     grid-template-columns: 1fr;
     gap: 10px;
   }
@@ -91,7 +116,7 @@
   #fresh-console .fc-profile-card,
   #fresh-console .fc-profile-card > button,
   #fresh-console .fc-add-card {
-    min-height: 136px;
+    min-height: 134px;
   }
 
   #fresh-console .fc-profile-card > button,
@@ -101,9 +126,10 @@
   #fresh-console .fc-assets,
   #fresh-console .fc-asset-row,
   #fresh-console .fc-result-row,
-  #fresh-console .fc-empty {
-    border-color: rgba(255, 255, 255, 0.095);
-    background: #101722;
+  #fresh-console .fc-empty,
+  #fresh-console .fc-login-card {
+    border-color: var(--m-line);
+    background: var(--m-card);
     box-shadow: none;
   }
 
@@ -131,32 +157,27 @@
     font-size: 0.68rem;
   }
 
-  #fresh-console .fc-choice {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
   #fresh-console .fc-choice button {
-    min-height: 120px;
+    min-height: 118px;
     padding: 18px;
     border-radius: 20px;
   }
 
-  #fresh-console .fc-editor-grid,
-  #fresh-console .fc-two,
-  #fresh-console .fc-manage {
-    grid-template-columns: 1fr;
-    gap: 10px;
+  #fresh-console .fc-section,
+  #fresh-console .fc-assets {
+    padding: 14px;
+    border-radius: 21px;
+    animation: fc-mobile-card-in 220ms ease both;
   }
 
   #fresh-console .fc-section {
     margin-bottom: 10px;
-    padding: 14px;
-    border-radius: 20px;
-    animation: fc-mobile-card-in 220ms ease both;
   }
 
-  #fresh-console .fc-section-head {
+  #fresh-console .fc-section-head,
+  #fresh-console .fc-assets-head {
+    align-items: flex-start;
+    gap: 8px;
     margin-bottom: 12px;
   }
 
@@ -165,13 +186,17 @@
     font-size: 0.96rem;
   }
 
-  #fresh-console .fc-section-head small {
+  #fresh-console .fc-section-head small,
+  #fresh-console .fc-assets-head span {
+    max-width: 56%;
     font-size: 0.72rem;
+    line-height: 1.35;
+    text-align: right;
   }
 
   #fresh-console .fc-field {
-    margin-bottom: 10px;
     gap: 6px;
+    margin-bottom: 10px;
   }
 
   #fresh-console .fc-field > span {
@@ -181,8 +206,16 @@
   #fresh-console input,
   #fresh-console select {
     min-height: 46px;
+    border-color: var(--m-line);
     border-radius: 14px;
+    background: var(--m-input);
+    color: var(--m-text);
     font-size: 16px;
+  }
+
+  #fresh-console input:focus,
+  #fresh-console select:focus {
+    border-color: color-mix(in srgb, var(--accent, #7dd3fc) 70%, #ffffff 0%);
   }
 
   #fresh-console .fc-range,
@@ -192,13 +225,16 @@
 
   #fresh-console .fc-color {
     min-height: 46px;
+    border-color: var(--m-line);
     border-radius: 14px;
+    background: var(--m-input);
   }
 
   #fresh-console .fc-toggle {
     min-height: 46px;
+    border-color: var(--m-line);
     border-radius: 14px;
-    background: #0d1118;
+    background: var(--m-input);
   }
 
   #fresh-console .fc-toggle-grid {
@@ -206,30 +242,26 @@
   }
 
   #fresh-console .fc-tabs {
-    position: fixed;
-    left: 10px;
-    right: 10px;
-    bottom: calc(10px + env(safe-area-inset-bottom));
-    z-index: 35;
+    position: sticky;
+    top: calc(64px + env(safe-area-inset-top));
+    z-index: 16;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    margin: 0;
+    gap: 7px;
+    margin: 0 0 10px;
     padding: 7px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 24px;
-    background: rgba(10, 13, 19, 0.92);
-    backdrop-filter: blur(22px);
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.44);
-    animation: fc-mobile-tabs-in 260ms ease both;
+    border: 1px solid var(--m-line);
+    border-radius: 20px;
+    background: rgba(8, 10, 15, 0.88);
+    backdrop-filter: blur(18px);
   }
 
   #fresh-console .fc-tabs button {
     justify-content: center;
-    min-height: 48px;
+    min-height: 44px;
     padding: 0 8px;
-    border-radius: 18px;
-    font-size: 0.82rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
   }
 
   #fresh-console .fc-tabs b {
@@ -238,30 +270,18 @@
     font-size: 0.68rem;
   }
 
-  #fresh-console .fc-tabs button.active {
+  #fresh-console .fc-tabs button.active,
+  #fresh-console .fc-source-tabs button.active {
+    border-color: color-mix(in srgb, var(--accent, #7dd3fc) 60%, var(--m-line-strong));
     background: color-mix(in srgb, var(--accent, #7dd3fc) 18%, #171f2b);
   }
 
-  #fresh-console .fc-assets {
-    padding: 13px;
-    border-radius: 21px;
-  }
-
-  #fresh-console .fc-assets-head {
-    align-items: flex-start;
-    margin-bottom: 10px;
-  }
-
-  #fresh-console .fc-assets-head span {
-    max-width: 54%;
-    font-size: 0.72rem;
-    line-height: 1.35;
-  }
-
-  #fresh-console .fc-installed {
+  #fresh-console .fc-installed,
+  #fresh-console .fc-results {
     max-height: none;
     overflow: visible;
     gap: 7px;
+    padding-right: 0;
   }
 
   #fresh-console .fc-asset-row,
@@ -316,9 +336,9 @@
     gap: 8px;
     margin: 12px 0 10px;
     padding: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--m-line);
     border-radius: 18px;
-    background: #0d1118;
+    background: var(--m-input);
   }
 
   #fresh-console .fc-library-bar form,
@@ -350,16 +370,10 @@
     font-size: 0.8rem;
   }
 
-  #fresh-console .fc-results {
-    max-height: none;
-    overflow: visible;
-    gap: 7px;
-    padding-right: 0;
-  }
-
   #fresh-console .fc-empty {
     min-height: 78px;
     border-radius: 16px;
+    color: var(--m-muted);
     font-size: 0.86rem;
   }
 
@@ -368,7 +382,7 @@
     align-items: flex-end;
     justify-content: center;
     padding: 12px 10px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(0, 0, 0, 0.38);
+    background: rgba(0, 0, 0, 0.42);
     animation: fc-mobile-fade 160ms ease both;
   }
 
@@ -377,8 +391,10 @@
     width: 100%;
     max-width: 460px;
     padding: 14px;
+    border-color: var(--m-line-strong);
     border-radius: 24px;
-    background: #111722;
+    background: var(--m-card);
+    box-shadow: 0 18px 54px rgba(0, 0, 0, 0.48);
     animation: fc-mobile-sheet-in 220ms ease both;
   }
 
@@ -391,16 +407,12 @@
   #fresh-console .fc-toast {
     left: 10px;
     right: 10px;
-    bottom: calc(82px + env(safe-area-inset-bottom));
+    bottom: calc(12px + env(safe-area-inset-bottom));
     max-width: none;
     padding: 12px 14px;
     border-radius: 16px;
     text-align: center;
     animation: fc-mobile-toast-in 220ms ease both;
-  }
-
-  #fresh-console .fc-shell:not(:has(.fc-editor)) .fc-toast {
-    bottom: calc(12px + env(safe-area-inset-bottom));
   }
 }
 
@@ -412,8 +424,8 @@
 
   #fresh-console .fc-title-row h2,
   #fresh-console .fc-editor-title h2 {
-    max-width: 66vw;
-    font-size: 1.36rem;
+    max-width: 64vw;
+    font-size: 1.34rem;
   }
 
   #fresh-console .fc-library-bar {
@@ -434,7 +446,7 @@
   }
 }
 
-@keyframes fc-mobile-in {
+@keyframes fc-mobile-page-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
@@ -444,13 +456,8 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes fc-mobile-tabs-in {
-  from { opacity: 0; transform: translateY(18px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
 @keyframes fc-mobile-sheet-in {
-  from { opacity: 0; transform: translateY(22px) scale(0.98); }
+  from { opacity: 0; transform: translateY(22px) scale(0.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
