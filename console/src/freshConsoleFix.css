@@ -1,0 +1,96 @@
+#fresh-console .fc-toggle.icon-only {
+  width: 58px;
+  min-width: 58px;
+  justify-content: center;
+  padding: 0;
+}
+
+#fresh-console .fc-toggle.icon-only span {
+  display: none;
+}
+
+#fresh-console .fc-installed,
+#fresh-console .fc-results {
+  scrollbar-width: thin;
+  scrollbar-color: #354052 transparent;
+}
+
+#fresh-console .fc-results {
+  max-height: 430px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+#fresh-console .fc-result-row button:disabled {
+  color: #8b95a5;
+}
+
+#fresh-console .fc-menu button,
+#fresh-console .fc-confirm button {
+  border: 1px solid #2c3442;
+  border-radius: 12px;
+  background: #171f2b;
+  color: #eef2f7;
+  padding: 10px 12px;
+  font-weight: 850;
+}
+
+#fresh-console .fc-menu .danger {
+  border-color: rgba(255, 125, 147, 0.34);
+  color: #ff9aaa;
+}
+
+#fresh-console .fc-source-tabs button.active,
+#fresh-console .fc-tabs button.active {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent, #7dd3fc) 45%, transparent);
+}
+
+#fresh-console .fc-field input[readonly] {
+  color: #cbd5e1;
+  cursor: default;
+}
+
+#fresh-console .fc-wide-search {
+  margin-bottom: 8px;
+}
+
+#fresh-console .fc-assets-head span {
+  text-align: right;
+}
+
+@media (min-width: 861px) {
+  #fresh-console .fc-main-panel {
+    min-height: 720px;
+  }
+
+  #fresh-console .fc-assets {
+    min-height: 668px;
+  }
+}
+
+@media (max-width: 860px) {
+  #fresh-console .fc-asset-row {
+    grid-template-columns: 40px minmax(0, 1fr) 54px 34px;
+  }
+
+  #fresh-console .fc-result-row {
+    grid-template-columns: 40px minmax(0, 1fr) 62px;
+  }
+
+  #fresh-console .fc-toggle.icon-only {
+    width: 54px;
+    min-width: 54px;
+  }
+
+  #fresh-console .fc-tabs {
+    position: sticky;
+    top: 70px;
+    z-index: 8;
+    padding: 8px 0;
+    background: #080a0f;
+  }
+
+  #fresh-console .fc-results {
+    max-height: none;
+  }
+}
