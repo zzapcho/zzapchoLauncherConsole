@@ -1,0 +1,288 @@
+/* Stable rebuild layer. Loaded last on purpose. */
+:root {
+  --console-bg: #070b08;
+  --console-panel: rgba(10, 18, 12, 0.82);
+  --console-panel-solid: #0d150f;
+  --console-line: rgba(255, 255, 255, 0.1);
+  --console-line-strong: rgba(255, 255, 255, 0.16);
+  --console-text: #f2fff3;
+  --console-muted: #9aa79d;
+}
+
+html,
+body,
+#root,
+.notion-bg {
+  background: var(--console-bg) !important;
+}
+
+.notion-bg::before,
+.notion-bg::after,
+.app-v2::before,
+.launcher-content-surface::before,
+.asset-clean-surface::before {
+  display: none !important;
+}
+
+.app-v2 {
+  color: var(--console-text);
+}
+
+.topbar-v2.clean-topbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  min-height: 74px;
+  padding: 18px 28px !important;
+  border-bottom: 1px solid var(--console-line) !important;
+  background: rgba(7, 11, 8, 0.92) !important;
+  backdrop-filter: blur(18px);
+}
+
+.console-title-button {
+  border: 0;
+  background: transparent;
+  color: var(--console-text);
+  font-size: 1.5rem;
+  font-weight: 950;
+  letter-spacing: -0.06em;
+  cursor: pointer;
+}
+
+.console-title-button:hover {
+  opacity: 0.78;
+}
+
+.topbar-v2 .mobile-menu-button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--console-line-strong) !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+  color: var(--console-text) !important;
+  box-shadow: none !important;
+}
+
+.topbar-v2 .brand-line,
+.topbar-v2 .primary-button,
+.topbar-v2 .save-toast {
+  display: none !important;
+}
+
+.home-only-panel,
+.new-choice-panel,
+.modpack-page-shot,
+.profile-section-v2,
+.workspace-v2,
+.editor-status-box {
+  width: min(1180px, calc(100% - 44px)) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.home-only-panel,
+.new-choice-panel,
+.modpack-page-shot {
+  margin-top: 28px !important;
+}
+
+.home-title {
+  margin-bottom: 16px !important;
+}
+
+.home-title h2,
+.section-title-row h2,
+.card-head-v2 h3,
+.profile-card-v2 strong,
+.content-title-shot,
+.project-row-shot strong,
+.installed-info strong {
+  color: var(--console-text) !important;
+}
+
+.home-title .eyebrow,
+.home-title span,
+.card-head-v2 small,
+.ui-field > span,
+.profile-card-v2 p,
+.profile-meta b,
+.project-row-shot small,
+.version-link-shot,
+.source-heading-shot span,
+.editor-status-box {
+  color: var(--console-muted) !important;
+}
+
+.notion-card,
+.profile-card-v2,
+.add-profile-card,
+.new-choice-grid button,
+.launcher-content-surface,
+.installed-card-shot,
+.empty-installed-shot,
+.project-row-shot,
+.source-heading-shot,
+.drop-zone-shot,
+.library-actions-shot,
+.compact-profile-header,
+.editor-status-box {
+  border: 1px solid var(--console-line) !important;
+  background: var(--console-panel) !important;
+  box-shadow: none !important;
+}
+
+.profile-card-frame .profile-card-v2 {
+  border-left: 4px solid var(--accent, rgba(255,255,255,0.2)) !important;
+}
+
+.profile-dot,
+.green-dot {
+  background: var(--accent, #8fe388) !important;
+  box-shadow: none !important;
+}
+
+.workspace-v2.launcher-style-workspace,
+.editor-no-page-scroll {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.ui-field input,
+.ui-field textarea,
+.ui-field select,
+.color-input,
+.library-search-shot,
+.toggle-switch {
+  border: 1px solid var(--console-line) !important;
+  background: rgba(0, 0, 0, 0.22) !important;
+  color: var(--console-text) !important;
+  box-shadow: none !important;
+}
+
+.reorder-mode-button,
+.secondary-button,
+.folder-button-shot,
+.library-search-shot button,
+.project-row-shot button,
+.source-tabs-shot button,
+.tiny-icon,
+.update-icon-shot,
+.modal-actions-v2 button,
+.console-mobile-menu button:not(.sheet-close) {
+  border: 1px solid var(--console-line-strong) !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+  color: var(--console-text) !important;
+  box-shadow: none !important;
+}
+
+.reorder-mode-button.active,
+.source-tabs-shot button.active,
+.tab-shell-shot button.active,
+.mobile-editor-nav-tabs button.active {
+  border-color: color-mix(in srgb, var(--accent, #8fe388) 55%, var(--console-line-strong)) !important;
+  background: color-mix(in srgb, var(--accent, #8fe388) 13%, rgba(255,255,255,0.055)) !important;
+  color: var(--console-text) !important;
+}
+
+.profile-manage-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.profile-manage-actions button {
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+.danger-button-v2,
+.mobile-menu-danger {
+  color: #ff9aaa !important;
+}
+
+.switch-track,
+.switch-track.checked {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+.switch-track span,
+.switch-track.checked span {
+  background: var(--console-text) !important;
+}
+
+.asset-icon-shot,
+.result-icon-shot,
+.project-row-shot img {
+  border: 1px solid var(--console-line) !important;
+  background: rgba(0, 0, 0, 0.24) !important;
+}
+
+.modpack-asset-badge {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: var(--console-text) !important;
+  box-shadow: none !important;
+}
+
+@media (min-width: 761px) {
+  .home-profile-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+    gap: 14px !important;
+  }
+
+  .workspace-v2.launcher-style-workspace {
+    grid-template-columns: minmax(320px, 400px) minmax(0, 1fr) !important;
+    gap: 18px !important;
+  }
+
+  .content-column-fixed .launcher-content-surface {
+    min-height: 720px;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar-v2.clean-topbar {
+    min-height: 70px;
+    padding: calc(10px + env(safe-area-inset-top)) 14px 10px !important;
+  }
+
+  .home-only-panel,
+  .new-choice-panel,
+  .modpack-page-shot,
+  .profile-section-v2,
+  .workspace-v2,
+  .editor-status-box {
+    width: calc(100% - 22px) !important;
+  }
+
+  .profile-manage-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-sheet-backdrop,
+  .modal-backdrop-v2 {
+    align-items: flex-end !important;
+    padding: 0 12px calc(112px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .mobile-sheet.console-mobile-menu,
+  .confirm-modal-v2 {
+    position: static !important;
+    width: 100% !important;
+    max-width: 440px !important;
+    border: 1px solid var(--console-line-strong) !important;
+    border-radius: 26px !important;
+    background: var(--console-panel-solid) !important;
+  }
+
+  .app-v2:has(.content-column.mobile-pane-active) .editor-status-box {
+    display: none !important;
+  }
+
+  .app-v2:has(#profile-settings-section.mobile-pane-active) .editor-status-box {
+    display: flex !important;
+  }
+}
