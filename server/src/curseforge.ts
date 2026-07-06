@@ -10,6 +10,12 @@ export interface CurseForgeProjectResult {
   projectType: "mod" | "resourcepack" | "shader" | "modpack";
   author?: string;
   follows?: number;
+  fileId?: string;
+  fileName?: string;
+  fileVersion?: string;
+  downloadUrl?: string;
+  sha1?: string;
+  sha256?: string;
 }
 
 const CLASS_IDS = {
@@ -69,6 +75,19 @@ function pickBestFile(files: CurseForgeFile[], minecraftVersion: string, modLoad
     ?? files[0];
 }
 
+function latestFileInfo(files?: CurseForgeFile[]) {
+  const file = files?.find((item) => item.downloadUrl) ?? files?.[0];
+  if (!file) return {};
+  return {
+    fileId: String(file.id),
+    fileName: file.fileName,
+    fileVersion: file.displayName ?? file.fileName,
+    downloadUrl: file.downloadUrl ?? undefined,
+    sha1: fileSha(file.hashes, 1),
+    sha256: fileSha(file.hashes, 2),
+  };
+}
+
 async function fetchDownloadUrl(apiKey: string, projectId: string, fileId: number) {
   const response = await fetch(`https://api.curseforge.com/v1/mods/${projectId}/files/${fileId}/download-url`, {
     headers: headers(apiKey),
@@ -95,7 +114,7 @@ export async function searchCurseForge(query: string, kind: CurseForgeKind): Pro
   });
   if (!response.ok) throw new Error(`CurseForge search failed: ${response.status}`);
 
-  const payload = await response.json() as { data?: Array<{ id: number; slug?: string; name: string; summary?: string; authors?: Array<{ name: string }>; logo?: { url?: string }; downloadCount?: number }> };
+  const payload = await response.json() as { data?: Array<{ id: number; slug?: string; name: string; summary?: string; authors?: Array<{ name: string }>; logo?: { url?: string }; downloadCount?: number; latestFiles?: CurseForgeFile[] }> };
   return (payload.data ?? []).map((item) => ({
     source: "curseforge",
     projectId: String(item.id),
@@ -106,6 +125,7 @@ export async function searchCurseForge(query: string, kind: CurseForgeKind): Pro
     projectType: kind,
     author: item.authors?.[0]?.name,
     follows: item.downloadCount,
+    ...latestFileInfo(item.latestFiles),
   }));
 }
 
