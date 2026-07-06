@@ -77,6 +77,8 @@ function normalizeProfile(value: unknown, index: number): LauncherProfile {
     editableFields: {
       ...DEFAULT_EDITABLE_FIELDS,
       ...Object.fromEntries(Object.entries(editable).filter(([, item]) => typeof item === "boolean")),
+      server: true,
+      memory: true,
     },
     launchOptions: {
       minMemoryMb: typeof launchOptions.minMemoryMb === "number" ? launchOptions.minMemoryMb : base.launchOptions.minMemoryMb,
@@ -128,7 +130,7 @@ export async function writeManifest(profiles: unknown): Promise<{ sha: string | 
   const validation = validateProfilesManifest(profiles);
   if (!validation.ok) throw new Error(validation.errors.join("\n"));
   const before = await readManifest().then((result) => result.profiles).catch(() => []);
-  const next = assertProfilesManifest(profiles);
+  const next = normalizeManifest(profiles);
   await mkdir(path.dirname(manifestPath), { recursive: true });
   await cleanupDeletedProfileUploads(before, next);
   const deletedProfileUploads = before.filter((profile) => !next.some((item) => item.id === profile.id)).length;
