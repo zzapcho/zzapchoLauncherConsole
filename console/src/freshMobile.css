@@ -1,86 +1,86 @@
 @media (max-width: 860px) {
   #fresh-console {
-    --m-gap: 10px;
-    --m-radius: 18px;
-    --m-card: #101620;
-    --m-card-2: #141c28;
-    --m-line: #242d3a;
-    --m-text: #f3f6fb;
-    --m-muted: #99a4b5;
+    --m-page-x: 12px;
+    --m-radius-lg: 22px;
+    --m-radius-md: 16px;
+    --m-tap: 46px;
     min-height: 100svh;
+    padding-bottom: calc(28px + env(safe-area-inset-bottom));
     overflow-x: hidden;
     -webkit-tap-highlight-color: transparent;
   }
 
   #fresh-console .fc-shell {
     min-height: 100svh;
-    padding-bottom: calc(22px + env(safe-area-inset-bottom));
+    padding-bottom: calc(28px + env(safe-area-inset-bottom));
   }
 
   #fresh-console .fc-header {
-    min-height: 62px;
-    padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
-    border-bottom-color: rgba(255, 255, 255, 0.075);
+    min-height: calc(64px + env(safe-area-inset-top));
+    padding: calc(10px + env(safe-area-inset-top)) var(--m-page-x) 10px;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
     background: rgba(8, 10, 15, 0.88);
   }
 
   #fresh-console .fc-logo {
-    font-size: 1.28rem;
-    letter-spacing: -0.055em;
+    font-size: 1.34rem;
   }
 
   #fresh-console .fc-icon-btn,
   #fresh-console .fc-soft,
   #fresh-console .fc-primary,
   #fresh-console .fc-danger,
-  #fresh-console .fc-library-bar button,
-  #fresh-console .fc-result-row button,
   #fresh-console .fc-source-tabs button,
-  #fresh-console .fc-tabs button {
-    min-height: 42px;
+  #fresh-console .fc-tabs button,
+  #fresh-console .fc-library-bar button,
+  #fresh-console .fc-result-row button {
+    min-height: var(--m-tap);
     border-radius: 14px;
-    transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+    padding: 0 13px;
   }
 
-  #fresh-console button:active {
-    transform: scale(0.975);
+  #fresh-console input,
+  #fresh-console select {
+    min-height: var(--m-tap);
+    border-radius: 14px;
+    font-size: 16px;
   }
 
   #fresh-console .fc-page,
   #fresh-console .fc-editor {
     width: calc(100% - 20px);
-    margin-top: 12px;
+    margin-top: 14px;
   }
 
   #fresh-console .fc-title-row,
   #fresh-console .fc-editor-title {
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 12px;
-  }
-
-  #fresh-console .fc-title-row p,
-  #fresh-console .fc-editor-title p {
-    margin-bottom: 2px;
-    font-size: 0.68rem;
   }
 
   #fresh-console .fc-title-row h2,
   #fresh-console .fc-editor-title h2 {
-    max-width: 62vw;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 1.55rem;
-    letter-spacing: -0.065em;
+    font-size: 1.64rem;
+    line-height: 1.04;
+  }
+
+  #fresh-console .fc-title-row p,
+  #fresh-console .fc-editor-title p {
+    margin-bottom: 5px;
+    font-size: 0.68rem;
+    opacity: 0.86;
   }
 
   #fresh-console .fc-title-actions {
+    align-items: center;
     gap: 6px;
   }
 
   #fresh-console .fc-title-actions > span,
   #fresh-console .fc-editor-title > span {
-    display: none;
+    min-height: 34px;
+    padding: 8px 9px;
+    font-size: 0.72rem;
   }
 
   #fresh-console .fc-profile-grid,
@@ -89,13 +89,7 @@
   #fresh-console .fc-two,
   #fresh-console .fc-manage {
     grid-template-columns: 1fr;
-    gap: var(--m-gap);
-  }
-
-  #fresh-console .fc-profile-card,
-  #fresh-console .fc-profile-card > button,
-  #fresh-console .fc-add-card {
-    min-height: 128px;
+    gap: 10px;
   }
 
   #fresh-console .fc-profile-card > button,
@@ -103,33 +97,36 @@
   #fresh-console .fc-choice button,
   #fresh-console .fc-section,
   #fresh-console .fc-assets,
-  #fresh-console .fc-asset-row,
-  #fresh-console .fc-result-row,
-  #fresh-console .fc-empty {
-    border-radius: var(--m-radius);
-    background: var(--m-card);
-    box-shadow: none;
+  #fresh-console .fc-empty,
+  #fresh-console .fc-login-card {
+    border-radius: var(--m-radius-lg);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  }
+
+  #fresh-console .fc-profile-card,
+  #fresh-console .fc-profile-card > button,
+  #fresh-console .fc-add-card {
+    min-height: 136px;
   }
 
   #fresh-console .fc-profile-card > button {
-    padding: 15px;
-    border-left-width: 3px;
+    padding: 16px;
   }
 
   #fresh-console .fc-profile-card i {
-    width: 10px;
-    height: 10px;
-    margin-bottom: 12px;
+    width: 11px;
+    height: 11px;
+    margin-bottom: 13px;
   }
 
   #fresh-console .fc-profile-card p {
-    min-height: 0;
-    margin-bottom: 9px;
-    font-size: 0.84rem;
+    min-height: auto;
+    margin-bottom: 10px;
+    font-size: 0.88rem;
   }
 
   #fresh-console .fc-profile-card span {
-    padding: 4px 7px;
+    padding: 5px 7px;
     font-size: 0.68rem;
   }
 
@@ -139,60 +136,33 @@
   }
 
   #fresh-console .fc-reorder button {
-    min-height: 34px;
+    min-height: 36px;
     padding: 0 10px;
     border-radius: 12px;
   }
 
   #fresh-console .fc-choice button {
-    min-height: 116px;
+    min-height: 124px;
     padding: 18px;
   }
 
-  #fresh-console .fc-choice strong {
-    font-size: 1.1rem;
+  #fresh-console .fc-side,
+  #fresh-console .fc-main-panel {
+    min-width: 0;
   }
 
-  #fresh-console .fc-section,
-  #fresh-console .fc-assets {
-    padding: 13px;
+  #fresh-console .fc-section {
+    margin-bottom: 10px;
+    padding: 14px;
   }
 
-  #fresh-console .fc-section-head,
-  #fresh-console .fc-assets-head {
-    align-items: center;
-    margin-bottom: 11px;
-  }
-
-  #fresh-console .fc-section-head h3,
-  #fresh-console .fc-assets-head h3 {
-    font-size: 0.96rem;
-  }
-
-  #fresh-console .fc-section-head small,
-  #fresh-console .fc-assets-head span {
-    max-width: 48%;
-    overflow: hidden;
-    text-align: right;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.72rem;
+  #fresh-console .fc-section-head {
+    margin-bottom: 12px;
   }
 
   #fresh-console .fc-field {
     margin-bottom: 10px;
     gap: 6px;
-  }
-
-  #fresh-console .fc-field > span {
-    font-size: 0.72rem;
-  }
-
-  #fresh-console input,
-  #fresh-console select {
-    min-height: 43px;
-    border-radius: 13px;
-    font-size: 16px;
   }
 
   #fresh-console .fc-range,
@@ -202,8 +172,8 @@
   }
 
   #fresh-console .fc-color {
-    min-height: 43px;
-    border-radius: 13px;
+    min-height: var(--m-tap);
+    border-radius: 14px;
   }
 
   #fresh-console .fc-toggle-grid {
@@ -211,9 +181,96 @@
   }
 
   #fresh-console .fc-toggle {
-    min-height: 42px;
-    border-radius: 13px;
-    background: #0d121a;
+    min-height: var(--m-tap);
+    border-radius: 14px;
+  }
+
+  #fresh-console .fc-tabs {
+    position: sticky;
+    top: calc(64px + env(safe-area-inset-top));
+    z-index: 12;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+    margin: 0 -2px 10px;
+    padding: 8px 2px;
+    background: linear-gradient(to bottom, rgba(8, 10, 15, 0.98), rgba(8, 10, 15, 0.92));
+  }
+
+  #fresh-console .fc-tabs button {
+    justify-content: center;
+    gap: 5px;
+    padding: 0 8px;
+    font-size: 0.82rem;
+  }
+
+  #fresh-console .fc-tabs b {
+    min-width: 20px;
+    padding: 2px 5px;
+    font-size: 0.7rem;
+  }
+
+  #fresh-console .fc-assets {
+    padding: 12px;
+  }
+
+  #fresh-console .fc-assets-head {
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  #fresh-console .fc-assets-head h3 {
+    font-size: 1.02rem;
+  }
+
+  #fresh-console .fc-assets-head span {
+    max-width: 48%;
+    overflow: hidden;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.76rem;
+  }
+
+  #fresh-console .fc-installed,
+  #fresh-console .fc-results {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  #fresh-console .fc-asset-row,
+  #fresh-console .fc-result-row {
+    min-height: 58px;
+    padding: 8px;
+    border-radius: var(--m-radius-md);
+  }
+
+  #fresh-console .fc-asset-row {
+    grid-template-columns: 40px minmax(0, 1fr) 52px 34px;
+  }
+
+  #fresh-console .fc-result-row {
+    grid-template-columns: 40px minmax(0, 1fr) 62px;
+  }
+
+  #fresh-console .fc-asset-row img,
+  #fresh-console .fc-result-row img,
+  #fresh-console .fc-asset-row b,
+  #fresh-console .fc-result-row b {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  #fresh-console .fc-asset-row strong,
+  #fresh-console .fc-result-row strong {
+    font-size: 0.9rem;
+  }
+
+  #fresh-console .fc-asset-row small,
+  #fresh-console .fc-result-row small {
+    font-size: 0.74rem;
   }
 
   #fresh-console .fc-toggle.icon-only {
@@ -221,83 +278,23 @@
     min-width: 52px;
   }
 
-  #fresh-console .fc-main-panel {
-    min-width: 0;
-  }
-
-  #fresh-console .fc-tabs {
-    position: sticky;
-    top: calc(62px + env(safe-area-inset-top));
-    z-index: 12;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 7px;
-    margin: 4px -2px 10px;
-    padding: 8px 2px;
-    background: linear-gradient(180deg, #080a0f 78%, rgba(8, 10, 15, 0));
-  }
-
-  #fresh-console .fc-tabs button {
-    justify-content: center;
-    min-width: 0;
-    padding: 0 8px;
-    font-size: 0.82rem;
-  }
-
-  #fresh-console .fc-tabs b {
-    min-width: 19px;
-    padding: 1px 5px;
-    font-size: 0.68rem;
-  }
-
-  #fresh-console .fc-installed {
-    max-height: none;
-    overflow: visible;
-  }
-
-  #fresh-console .fc-asset-row,
-  #fresh-console .fc-result-row {
-    min-height: 58px;
-    padding: 8px;
-    gap: 9px;
-  }
-
-  #fresh-console .fc-asset-row {
-    grid-template-columns: 38px minmax(0, 1fr) 52px 34px;
-  }
-
-  #fresh-console .fc-result-row {
-    grid-template-columns: 38px minmax(0, 1fr) 62px;
-  }
-
-  #fresh-console .fc-asset-row img,
-  #fresh-console .fc-result-row img,
-  #fresh-console .fc-asset-row b,
-  #fresh-console .fc-result-row b {
-    width: 38px;
-    height: 38px;
+  #fresh-console .fc-icon-btn.small {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
     border-radius: 11px;
   }
 
-  #fresh-console .fc-asset-row strong,
-  #fresh-console .fc-result-row strong {
-    font-size: 0.86rem;
-  }
-
-  #fresh-console .fc-asset-row small,
-  #fresh-console .fc-result-row small {
-    font-size: 0.72rem;
-  }
-
   #fresh-console .fc-library-bar {
-    grid-template-columns: 86px minmax(0, 1fr);
+    grid-template-columns: 88px minmax(0, 1fr);
     gap: 8px;
     margin: 10px 0;
   }
 
   #fresh-console .fc-library-bar form,
   #fresh-console .fc-wide-search {
-    grid-template-columns: minmax(0, 1fr) 56px;
+    grid-template-columns: minmax(0, 1fr) 58px;
     gap: 7px;
   }
 
@@ -310,71 +307,157 @@
 
   #fresh-console .fc-source-tabs button {
     justify-content: center;
+    padding: 0 8px;
   }
 
-  #fresh-console .fc-results {
-    max-height: none;
-    overflow: visible;
-    gap: 7px;
+  #fresh-console .fc-empty {
+    min-height: 76px;
+    font-size: 0.86rem;
   }
 
   #fresh-console .fc-backdrop {
-    align-items: end;
-    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(0, 0, 0, 0.45);
-    animation: fcFadeIn 150ms ease both;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(0, 0, 0, 0.48);
   }
 
   #fresh-console .fc-menu,
   #fresh-console .fc-confirm {
     width: 100%;
-    border-radius: 24px;
-    background: #101620;
-    animation: fcSheetUp 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    max-width: 460px;
+    border-radius: 26px;
+    padding: 16px;
+    animation: fc-sheet-in 180ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
   }
 
-  #fresh-console .fc-menu > button {
-    min-height: 44px;
+  #fresh-console .fc-menu > div,
+  #fresh-console .fc-confirm > div {
+    margin-bottom: 10px;
+  }
+
+  #fresh-console .fc-menu > button,
+  #fresh-console .fc-confirm button {
+    min-height: var(--m-tap);
+    border-radius: 14px;
   }
 
   #fresh-console .fc-toast {
     left: 10px;
     right: 10px;
     bottom: calc(10px + env(safe-area-inset-bottom));
+    max-width: none;
     border-radius: 16px;
-    animation: fcToastUp 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    animation: fc-toast-in 180ms ease-out both;
   }
 
-  #fresh-console .fc-page,
-  #fresh-console .fc-editor,
+  #fresh-console .fc-login-card {
+    padding: 22px;
+  }
+
+  #fresh-console .fc-login-card h1 {
+    font-size: 2rem;
+  }
+
   #fresh-console .fc-profile-card,
+  #fresh-console .fc-add-card,
+  #fresh-console .fc-choice button,
   #fresh-console .fc-section,
-  #fresh-console .fc-assets {
-    animation: fcSoftIn 180ms ease both;
+  #fresh-console .fc-assets,
+  #fresh-console .fc-asset-row,
+  #fresh-console .fc-result-row,
+  #fresh-console .fc-empty {
+    animation: fc-card-in 180ms ease-out both;
+  }
+
+  #fresh-console button,
+  #fresh-console .fc-profile-card > button,
+  #fresh-console .fc-choice button,
+  #fresh-console .fc-asset-row,
+  #fresh-console .fc-result-row {
+    transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, opacity 150ms ease;
+  }
+
+  #fresh-console button:active,
+  #fresh-console .fc-profile-card > button:active,
+  #fresh-console .fc-choice button:active {
+    transform: scale(0.985);
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 420px) {
+  #fresh-console {
+    --m-page-x: 10px;
+    --m-tap: 44px;
+  }
+
   #fresh-console .fc-page,
   #fresh-console .fc-editor {
     width: calc(100% - 16px);
   }
 
+  #fresh-console .fc-title-row h2,
+  #fresh-console .fc-editor-title h2 {
+    font-size: 1.48rem;
+  }
+
   #fresh-console .fc-library-bar {
-    grid-template-columns: 80px minmax(0, 1fr);
+    grid-template-columns: 82px minmax(0, 1fr);
   }
 
   #fresh-console .fc-library-bar form,
   #fresh-console .fc-wide-search {
-    grid-template-columns: minmax(0, 1fr) 52px;
+    grid-template-columns: minmax(0, 1fr) 54px;
   }
 
   #fresh-console .fc-result-row {
-    grid-template-columns: 36px minmax(0, 1fr) 56px;
+    grid-template-columns: 38px minmax(0, 1fr) 58px;
   }
 
   #fresh-console .fc-asset-row {
-    grid-template-columns: 36px minmax(0, 1fr) 50px 32px;
+    grid-template-columns: 38px minmax(0, 1fr) 50px 32px;
+  }
+
+  #fresh-console .fc-asset-row img,
+  #fresh-console .fc-result-row img,
+  #fresh-console .fc-asset-row b,
+  #fresh-console .fc-result-row b {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@keyframes fc-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fc-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fc-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -386,24 +469,4 @@
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-@keyframes fcFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes fcSheetUp {
-  from { opacity: 0; transform: translateY(16px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes fcToastUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fcSoftIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
 }
