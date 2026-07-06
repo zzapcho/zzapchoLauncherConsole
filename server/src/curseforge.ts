@@ -9,6 +9,7 @@ export interface CurseForgeProjectResult {
   iconUrl?: string;
   projectType: "mod" | "resourcepack" | "shader" | "modpack";
   author?: string;
+  follows?: number;
 }
 
 const CLASS_IDS = {
@@ -26,6 +27,17 @@ const MOD_LOADER_TYPES: Partial<Record<ModLoader, number>> = {
 
 const GAME_ID = 432;
 
+type CurseForgeKind = keyof typeof CLASS_IDS;
+
+interface CurseForgeFile {
+  id: number;
+  displayName?: string;
+  fileName: string;
+  downloadUrl?: string | null;
+  gameVersions?: string[];
+  hashes?: Array<{ algo: number; value: string }>;
+}
+
 function getApiKey() {
   return process.env.CURSEFORGE_API_KEY ?? "";
 }
@@ -34,25 +46,56 @@ function headers(apiKey: string) {
   return { Accept: "application/json", "x-api-key": apiKey };
 }
 
-export async function searchCurseForge(query: string, kind: keyof typeof CLASS_IDS): Promise<CurseForgeProjectResult[]> {
+function requireApiKey() {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("CURSEFORGE_API_KEY is missing in server/.env");
+  return apiKey;
+}
+
+function projectUrl(slugOrId: string) {
+  return `https://www.curseforge.com/minecraft/search?search=${encodeURIComponent(slugOrId)}`;
+}
+
+function fileSha(hashes: CurseForgeFile["hashes"], algo: number) {
+  return hashes?.find((hash) => hash.algo === algo)?.value;
+}
+
+function pickBestFile(files: CurseForgeFile[], minecraftVersion: string, modLoader: ModLoader) {
+  const loader = modLoader.toLowerCase();
+  return files.find((file) => file.downloadUrl && file.gameVersions?.includes(minecraftVersion) && file.gameVersions?.some((version) => version.toLowerCase() === loader))
+    ?? files.find((file) => file.downloadUrl && file.gameVersions?.includes(minecraftVersion))
+    ?? files.find((file) => file.downloadUrl)
+    ?? files.find((file) => file.gameVersions?.includes(minecraftVersion))
+    ?? files[0];
+}
+
+async function fetchDownloadUrl(apiKey: string, projectId: string, fileId: number) {
+  const response = await fetch(`https://api.curseforge.com/v1/mods/${projectId}/files/${fileId}/download-url`, {
+    headers: headers(apiKey),
+  });
+  if (!response.ok) return null;
+  const payload = await response.json() as { data?: string | null };
+  return payload.data ?? null;
+}
+
+export async function searchCurseForge(query: string, kind: CurseForgeKind): Promise<CurseForgeProjectResult[]> {
+  const apiKey = requireApiKey();
 
   const params = new URLSearchParams({
     gameId: String(GAME_ID),
     classId: String(CLASS_IDS[kind]),
-    searchFilter: query,
-    pageSize: "12",
+    pageSize: "20",
     sortField: "2",
     sortOrder: "desc",
   });
+  if (query.trim()) params.set("searchFilter", query.trim());
 
   const response = await fetch(`https://api.curseforge.com/v1/mods/search?${params.toString()}`, {
     headers: headers(apiKey),
   });
   if (!response.ok) throw new Error(`CurseForge search failed: ${response.status}`);
 
-  const payload = await response.json() as { data?: Array<{ id: number; slug?: string; name: string; summary?: string; authors?: Array<{ name: string }>; logo?: { url?: string } }> };
+  const payload = await response.json() as { data?: Array<{ id: number; slug?: string; name: string; summary?: string; authors?: Array<{ name: string }>; logo?: { url?: string }; downloadCount?: number }> };
   return (payload.data ?? []).map((item) => ({
     source: "curseforge",
     projectId: String(item.id),
@@ -62,22 +105,24 @@ export async function searchCurseForge(query: string, kind: keyof typeof CLASS_I
     iconUrl: item.logo?.url,
     projectType: kind,
     author: item.authors?.[0]?.name,
+    follows: item.downloadCount,
   }));
 }
 
 export async function resolveCurseForgeAsset(input: {
   projectId: string;
-  kind: keyof typeof CLASS_IDS;
+  slug?: string;
+  kind: CurseForgeKind;
   minecraftVersion: string;
   modLoader: ModLoader;
   title?: string;
+  iconUrl?: string;
 }): Promise<LauncherAsset> {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error("CURSEFORGE_API_KEY is missing in server/.env");
+  const apiKey = requireApiKey();
 
   const params = new URLSearchParams({
     gameVersion: input.minecraftVersion,
-    pageSize: "20",
+    pageSize: "50",
     sortField: "2",
     sortOrder: "desc",
   });
@@ -89,17 +134,27 @@ export async function resolveCurseForgeAsset(input: {
   });
   if (!response.ok) throw new Error(`CurseForge file lookup failed: ${response.status}`);
 
-  const payload = await response.json() as { data?: Array<{ id: number; displayName?: string; fileName: string; downloadUrl?: string | null; hashes?: Array<{ algo: number; value: string }> }> };
-  const file = payload.data?.find((item) => item.downloadUrl) ?? payload.data?.[0];
+  const payload = await response.json() as { data?: CurseForgeFile[] };
+  const files = payload.data ?? [];
+  const file = pickBestFile(files, input.minecraftVersion, input.modLoader);
   if (!file) throw new Error("No matching CurseForge file for this profile");
 
-  const sha1 = file.hashes?.find((hash) => hash.algo === 1)?.value;
+  const downloadUrl = file.downloadUrl ?? await fetchDownloadUrl(apiKey, input.projectId, file.id);
+  if (!downloadUrl) throw new Error(`${input.title ?? input.projectId}: CurseForge download URL을 가져오지 못했습니다.`);
+
   return {
     id: `curseforge-${input.projectId}`,
-    name: input.title ?? file.displayName ?? file.fileName,
+    name: input.title ?? file.displayName ?? file.fileName.replace(/\.(jar|zip)$/i, ""),
     version: file.displayName ?? file.fileName,
     required: true,
-    url: file.downloadUrl ?? `curseforge://${input.projectId}/${file.id}`,
-    sha256: sha1,
+    url: downloadUrl,
+    sha1: fileSha(file.hashes, 1),
+    sha256: fileSha(file.hashes, 2),
+    source: "curseforge",
+    projectId: input.projectId,
+    fileId: String(file.id),
+    fileName: file.fileName,
+    iconUrl: input.iconUrl,
+    projectUrl: projectUrl(input.slug ?? input.projectId),
   };
 }
