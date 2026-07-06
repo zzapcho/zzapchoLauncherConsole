@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { AlertCircle, ArrowDown, ArrowUp, Box, CheckCircle2, ChevronDown, Copy, Download, FolderPlus, Github, Lock, LogOut, Menu, Plus, RefreshCcw, Settings2, Trash2, X } from 'lucide-react';
+import { AlertCircle, ArrowDown, ArrowUp, Box, ChevronDown, Copy, Download, FolderPlus, Lock, LogOut, Menu, Plus, RefreshCcw, Settings2, Trash2, X } from 'lucide-react';
 import { clearSession, getSession, loadLauncherMeta, loadProfiles, login, saveProfiles, uploadAsset, type LauncherMeta } from './api';
 import { createEmptyProfile, guessJavaVersion, MOD_LOADERS, type LauncherAsset, type LauncherProfile, type ProfilesManifest } from '../../shared/profileTypes';
 import { createProfileFromModrinthModpack, getLatestModrinthAsset, getModrinthAsset, getModrinthVersionOptions, searchCurseForgeProjects, searchModrinthProjects, type AssetVersionOption, type ExternalProject, type ProjectKind, type SourceKind } from './externalSources';
@@ -8,20 +8,23 @@ import { createProfileFromModrinthModpack, getLatestModrinthAsset, getModrinthAs
 type AssetKind = 'mods' | 'resourcePacks' | 'shaders';
 type MobileSection = 'settings' | AssetKind;
 type View = 'home' | 'new' | 'modpack' | 'editor';
-type SaveStatus = { type: 'success' | 'error'; message: string; sha?: string | null } | null;
-type OpenPanels = { profile: boolean; permissions: boolean };
+type OpenPanels = { profile: boolean; permissions: boolean; manage: boolean };
 
 const PAGE_SIZE = 12;
+const AUTOSAVE_DELAY_MS = 900;
+
 const sections: Record<AssetKind, { title: string; kind: ProjectKind; accept: string }> = {
   mods: { title: '모드', kind: 'mod', accept: '.jar' },
   resourcePacks: { title: '리소스팩', kind: 'resourcepack', accept: '.zip' },
   shaders: { title: '쉐이더', kind: 'shader', accept: '.zip' },
 };
+
 const tabs: Array<{ id: AssetKind; label: string }> = [
   { id: 'mods', label: '모드' },
   { id: 'resourcePacks', label: '리팩' },
   { id: 'shaders', label: '쉐이더' },
 ];
+
 const editableLabels: Record<keyof LauncherProfile['editableFields'], string> = {
   server: '대표 서버',
   mods: '모드',
@@ -34,8 +37,13 @@ const editableLabels: Record<keyof LauncherProfile['editableFields'], string> = 
 };
 
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T; }
-function shortSha(value?: string | null) { return value ? value.slice(0, 7) : 'local'; }
 function ramGb(profile: LauncherProfile) { return Math.round((profile.launchOptions.maxMemoryMb / 1024) * 2) / 2; }
+function withAlwaysEditable(profile: LauncherProfile): LauncherProfile {
+  return { ...profile, editableFields: { ...profile.editableFields, server: true, memory: true } };
+}
+function profilesForSave(profiles: ProfilesManifest): ProfilesManifest {
+  return profiles.map(withAlwaysEditable);
+}
 function parseServerInput(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return { address: '', port: 25565 };
@@ -104,14 +112,13 @@ function LoginScreen({ onDone }: { onDone: () => void }) {
   return <main className='login-page notion-bg'><form className='login-card-v2' onSubmit={submit}><p className='eyebrow'>Admin</p><h1>Console</h1><p className='muted'>관리자 계정으로 로그인해서 프로필과 콘텐츠를 관리합니다.</p><Field label='아이디'><input value={username} onChange={(event) => setUsername(event.target.value)} /></Field><Field label='비밀번호'><input type='password' value={secret} onChange={(event) => setSecret(event.target.value)} /></Field><button className='primary-button full' disabled={busy}>{busy ? '확인 중...' : '로그인'}</button>{error && <p className='inline-error'><AlertCircle size={15} />{error}</p>}</form></main>;
 }
 
-function TopBar({ view, dirty, status, isSaving, saveDone, onHome, onSave, onMenu }: { view: View; dirty: boolean; status: SaveStatus; isSaving: boolean; saveDone: boolean; onHome: () => void; onSave: () => void; onMenu: () => void }) {
-  const saveLabel = isSaving ? '저장 중' : saveDone ? '저장됨' : '저장';
-  return <header className='topbar-v2 clean-topbar'><div className='brand-line clean-brand'><button className='ghost-button' onClick={onHome}>홈</button><div className='brand-text'><h1>Console <span>{view === 'home' ? 'HOME' : dirty ? 'EDIT' : 'SYNC'}</span></h1></div></div><div className='top-actions-v2'>{status && <div className={`save-toast ${status.type}`}>{status.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}<span>{status.message}</span>{status.sha && <code>{shortSha(status.sha)}</code>}</div>}<button className={`primary-button ${saveDone ? 'save-button-done' : ''}`} onClick={onSave} disabled={isSaving}>{isSaving || saveDone ? saveLabel : <><Github size={17} />{saveLabel}</>}</button><button className='mobile-menu-button' onClick={onMenu}><Menu /></button></div></header>;
+function TopBar({ onHome, onMenu }: { onHome: () => void; onMenu: () => void }) {
+  return <header className='topbar-v2 clean-topbar minimal-topbar'><button type='button' className='console-title-button' onClick={onHome}>Console</button><button className='mobile-menu-button' onClick={onMenu} aria-label='메뉴'><Menu /></button></header>;
 }
 
 function ConfirmDeleteModal({ profile, onCancel, onConfirm }: { profile: LauncherProfile; onCancel: () => void; onConfirm: () => void }) {
   const fileCount = profile.mods.length + profile.resourcePacks.length + profile.shaders.length;
-  return <div className='modal-backdrop-v2' onClick={onCancel}><section className='confirm-modal-v2' onClick={(event) => event.stopPropagation()}><div className='danger-orb'><Trash2 size={22} /></div><p className='eyebrow'>Delete Profile</p><h2>정말로 삭제할까요?</h2><p className='muted'><b>{profile.name}</b> 프로필을 삭제합니다. 저장하면 서버 업로드 파일 폴더도 함께 삭제됩니다.</p><div className='delete-summary-v2'><span>프로필</span><code>{profile.name}</code><span>등록 파일</span><code>{fileCount}개</code></div><div className='modal-actions-v2'><button className='ghost-button' onClick={onCancel}>취소</button><button className='danger-button-v2' onClick={onConfirm}><Trash2 size={16} />삭제</button></div></section></div>;
+  return <div className='modal-backdrop-v2' onClick={onCancel}><section className='confirm-modal-v2' onClick={(event) => event.stopPropagation()}><div className='danger-orb'><Trash2 size={22} /></div><p className='eyebrow'>Delete Profile</p><h2>정말로 삭제할까요?</h2><p className='muted'><b>{profile.name}</b> 프로필을 삭제합니다. 저장되면 서버 업로드 파일 폴더도 함께 정리됩니다.</p><div className='delete-summary-v2'><span>프로필</span><code>{profile.name}</code><span>등록 파일</span><code>{fileCount}개</code></div><div className='modal-actions-v2'><button className='ghost-button' onClick={onCancel}>취소</button><button className='danger-button-v2' onClick={onConfirm}><Trash2 size={16} />삭제</button></div></section></div>;
 }
 
 function ProfileCard({ profile, index, total, reorderMode, onClick, onMove }: { profile: LauncherProfile; index: number; total: number; reorderMode: boolean; onClick: () => void; onMove: (index: number, offset: -1 | 1) => void }) {
@@ -125,15 +132,16 @@ function NewProfileChoice({ onCustom, onModpack, onBack }: { onCustom: () => voi
   return <section className='new-choice-panel'><div className='home-title'><p className='eyebrow'>Create</p><h2>새 프로필</h2><span>시작 방식 선택</span></div><div className='new-choice-grid'><button onClick={onCustom}><strong>커스텀</strong><p>최신 마크/로더를 기본값으로 직접 구성합니다.</p></button><button onClick={onModpack}><strong>모드팩</strong><p>Modrinth 모드팩을 가져와 내부 파일을 분해합니다.</p></button></div><button className='ghost-button' onClick={onBack}>홈으로</button></section>;
 }
 
-function ProfileSettings({ profile, meta, openPanels, setOpenPanels, onChange, onUpdateModpack, mobileActive }: { profile: LauncherProfile; meta: LauncherMeta | null; openPanels: OpenPanels; setOpenPanels: (next: OpenPanels) => void; onChange: (profile: LauncherProfile) => void; onUpdateModpack: () => void; mobileActive: boolean }) {
-  const update = (patch: Partial<LauncherProfile>) => onChange({ ...profile, ...patch });
+function ProfileSettings({ profile, meta, openPanels, setOpenPanels, onChange, onUpdateModpack, onDuplicate, onDelete, mobileActive }: { profile: LauncherProfile; meta: LauncherMeta | null; openPanels: OpenPanels; setOpenPanels: (next: OpenPanels) => void; onChange: (profile: LauncherProfile) => void; onUpdateModpack: () => void; onDuplicate: () => void; onDelete: () => void; mobileActive: boolean }) {
+  const update = (patch: Partial<LauncherProfile>) => onChange(withAlwaysEditable({ ...profile, ...patch }));
   const setMemoryGb = (gb: number) => update({ launchOptions: { ...profile.launchOptions, minMemoryMb: Math.round(gb * 1024), maxMemoryMb: Math.round(gb * 1024) } });
   const setMcVersion = (minecraftVersion: string) => update({ minecraftVersion, javaVersion: guessJavaVersion(minecraftVersion) });
   const setLoader = (modLoader: LauncherProfile['modLoader']) => update({ modLoader, modLoaderVersion: latestLoader(meta, modLoader) });
   const setServer = (value: string) => { const parsed = parseServerInput(value); update({ defaultServer: { ...profile.defaultServer, address: parsed.address, port: parsed.port } }); };
   const ram = ramGb(profile);
+  const permissionEntries = (Object.entries(profile.editableFields) as Array<[keyof LauncherProfile['editableFields'], boolean]>).filter(([key]) => key !== 'server' && key !== 'memory');
   useEffect(() => { const latest = latestLoader(meta, profile.modLoader); if (profile.modLoader !== 'vanilla' && latest && profile.modLoaderVersion !== latest) update({ modLoaderVersion: latest }); }, [meta?.loaders.fabric?.[0], meta?.loaders.forge?.[0], meta?.loaders.quilt?.[0], profile.modLoader]);
-  return <section className={`settings-column mobile-pane ${mobileActive ? 'mobile-pane-active' : 'mobile-pane-hidden'}`} id='profile-settings-section'><Collapsible title={<><Settings2 size={18} />프로필 설정</>} subtitle='실행 기준' open={openPanels.profile} onToggle={() => setOpenPanels({ ...openPanels, profile: !openPanels.profile })}><div className='form-stack'><Field label='프로필 이름'><input value={profile.name} onChange={(event) => update({ name: event.target.value })} /></Field><Field label='커스텀 문구'><input value={profile.customText} onChange={(event) => update({ customText: event.target.value })} /></Field><div className='split-grid'><Field label='마크 버전'><select value={profile.minecraftVersion} onChange={(event) => setMcVersion(event.target.value)}>{mcVersions(meta, profile.minecraftVersion).map((version) => <option key={version}>{version}</option>)}</select></Field><Field label='Java'><input value={`Java ${profile.javaVersion}`} readOnly /></Field></div><div className='split-grid'><Field label='로더'><select value={profile.modLoader} onChange={(event) => setLoader(event.target.value as LauncherProfile['modLoader'])}>{MOD_LOADERS.map((loader) => <option key={loader}>{loader}</option>)}</select></Field><Field label='로더 버전'><select value={profile.modLoaderVersion} onChange={(event) => update({ modLoaderVersion: event.target.value })}>{loaderVersions(meta, profile.modLoader, profile.modLoaderVersion).map((version) => <option key={version} value={version}>{version || 'Vanilla'}</option>)}</select></Field></div><Field label='서버 주소'><input value={serverInput(profile)} placeholder='mc.zzapcho.kr 또는 mc.zzapcho.kr:25565' onChange={(event) => setServer(event.target.value)} /></Field><Field label={`RAM ${ram}GB`}><div className='ram-control'><input type='range' min={1} max={16} step={0.5} value={ram} onChange={(event) => setMemoryGb(Number(event.target.value))} /><input type='number' min={1} max={64} step={0.5} value={ram} onChange={(event) => setMemoryGb(Number(event.target.value))} /></div></Field><Field label='강조색'><div className='color-input'><span>{profile.accentColor}</span><input type='color' value={profile.accentColor} onChange={(event) => update({ accentColor: event.target.value })} /></div></Field>{profile.modpack && <button className='secondary-button modpack-update-button' type='button' onClick={onUpdateModpack}><Download size={16} />모드팩 업데이트 하기</button>}</div></Collapsible><Collapsible title={<><Lock size={18} />런처 수정 허용</>} subtitle='true = 유저 수정 가능' open={openPanels.permissions} onToggle={() => setOpenPanels({ ...openPanels, permissions: !openPanels.permissions })}><div className='toggle-grid'>{(Object.entries(profile.editableFields) as Array<[keyof LauncherProfile['editableFields'], boolean]>).map(([key, value]) => <Toggle key={key} label={editableLabels[key]} checked={value} lock onChange={() => update({ editableFields: { ...profile.editableFields, [key]: !value } })} />)}</div></Collapsible></section>;
+  return <section className={`settings-column mobile-pane ${mobileActive ? 'mobile-pane-active' : 'mobile-pane-hidden'}`} id='profile-settings-section'><Collapsible title={<><Settings2 size={18} />프로필 설정</>} subtitle='실행 기준' open={openPanels.profile} onToggle={() => setOpenPanels({ ...openPanels, profile: !openPanels.profile })}><div className='form-stack'><Field label='프로필 이름'><input value={profile.name} onChange={(event) => update({ name: event.target.value })} /></Field><Field label='커스텀 문구'><input value={profile.customText} onChange={(event) => update({ customText: event.target.value })} /></Field><div className='split-grid'><Field label='마크 버전'><select value={profile.minecraftVersion} onChange={(event) => setMcVersion(event.target.value)}>{mcVersions(meta, profile.minecraftVersion).map((version) => <option key={version}>{version}</option>)}</select></Field><Field label='Java'><input value={`Java ${profile.javaVersion}`} readOnly /></Field></div><div className='split-grid'><Field label='로더'><select value={profile.modLoader} onChange={(event) => setLoader(event.target.value as LauncherProfile['modLoader'])}>{MOD_LOADERS.map((loader) => <option key={loader}>{loader}</option>)}</select></Field><Field label='로더 버전'><select value={profile.modLoaderVersion} onChange={(event) => update({ modLoaderVersion: event.target.value })}>{loaderVersions(meta, profile.modLoader, profile.modLoaderVersion).map((version) => <option key={version} value={version}>{version || 'Vanilla'}</option>)}</select></Field></div><Field label='서버 주소'><input value={serverInput(profile)} placeholder='mc.zzapcho.kr 또는 mc.zzapcho.kr:25565' onChange={(event) => setServer(event.target.value)} /></Field><Field label={`RAM ${ram}GB`}><div className='ram-control'><input type='range' min={1} max={16} step={0.5} value={ram} onChange={(event) => setMemoryGb(Number(event.target.value))} /><input type='number' min={1} max={64} step={0.5} value={ram} onChange={(event) => setMemoryGb(Number(event.target.value))} /></div></Field><Field label='강조색'><div className='color-input'><span>{profile.accentColor}</span><input type='color' value={profile.accentColor} onChange={(event) => update({ accentColor: event.target.value })} /></div></Field>{profile.modpack && <button className='secondary-button modpack-update-button' type='button' onClick={onUpdateModpack}><Download size={16} />모드팩 업데이트</button>}</div></Collapsible><Collapsible title={<><Lock size={18} />런처 수정 허용</>} subtitle='서버/메모리는 항상 유저 수정 가능' open={openPanels.permissions} onToggle={() => setOpenPanels({ ...openPanels, permissions: !openPanels.permissions })}><div className='toggle-grid'>{permissionEntries.map(([key, value]) => <Toggle key={key} label={editableLabels[key]} checked={value} lock onChange={() => update({ editableFields: { ...profile.editableFields, server: true, memory: true, [key]: !value } })} />)}</div></Collapsible><Collapsible title='관리' subtitle='복제 / 삭제' open={openPanels.manage} onToggle={() => setOpenPanels({ ...openPanels, manage: !openPanels.manage })}><div className='form-stack profile-manage-actions'><button type='button' className='secondary-button' onClick={onDuplicate}>프로필 복제</button><button type='button' className='danger-button-v2' onClick={onDelete}><Trash2 size={16} />프로필 삭제</button></div></Collapsible></section>;
 }
 
 function AssetIcon({ asset, profile }: { asset: LauncherAsset; profile: LauncherProfile }) {
@@ -156,7 +164,7 @@ function ContentLibraryPanel({ profile, kind, onChange }: { profile: LauncherPro
   const [updates, setUpdates] = useState<Record<string, LauncherAsset>>({});
   const [versionList, setVersionList] = useState<Record<string, AssetVersionOption[]>>({});
   const items = profile[kind];
-  const updateItems = (next: LauncherAsset[]) => onChange({ ...profile, [kind]: next } as LauncherProfile);
+  const updateItems = (next: LauncherAsset[]) => onChange(withAlwaysEditable({ ...profile, [kind]: next } as LauncherProfile));
   async function loadProjects(term = query, reset = true) {
     if (busy) return;
     setBusy(true);
@@ -191,7 +199,7 @@ function ModpackPicker({ onBack, onCreate }: { onBack: () => void; onCreate: (pr
   async function load(term = query, reset = true) { if (busy) return; setBusy(true); const offset = reset ? 0 : results.length; setMessage(term.trim() ? '검색 중...' : '인기 모드팩'); try { const next = await searchModrinthProjects('modpack', term, offset, PAGE_SIZE); setResults((current) => reset ? next : [...current, ...next.filter((item) => !current.some((old) => old.projectId === item.projectId))]); setHasMore(next.length >= PAGE_SIZE); } catch (error) { if (reset) setResults([]); setHasMore(false); setMessage(error instanceof Error ? error.message : '검색 실패'); } finally { setBusy(false); } }
   useEffect(() => { void load('', true); }, []);
   useEffect(() => { const target = loadMoreRef.current; if (!target) return; const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting && hasMore && !busy) void load(query, false); }, { rootMargin: '180px' }); observer.observe(target); return () => observer.disconnect(); }, [hasMore, busy, query, results.length]);
-  async function select(project: ExternalProject) { setBusy(true); setMessage('.mrpack 분석 중...'); try { onCreate(await createProfileFromModrinthModpack(project)); } catch (error) { setMessage(error instanceof Error ? error.message : '모드팩 분석 실패'); } finally { setBusy(false); } }
+  async function select(project: ExternalProject) { setBusy(true); setMessage('.mrpack 분석 중...'); try { onCreate(withAlwaysEditable(await createProfileFromModrinthModpack(project))); } catch (error) { setMessage(error instanceof Error ? error.message : '모드팩 분석 실패'); } finally { setBusy(false); } }
   return <section className='modpack-page-shot'><div className='home-title'><p className='eyebrow'>Modpacks</p><h2>모드팩 선택</h2><span>{message}</span></div><form className='library-search-shot modpack-search' onSubmit={(event) => { event.preventDefault(); void load(query, true); }}><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder='Modrinth 모드팩 검색' /><button disabled={busy}>{busy ? '...' : '검색'}</button></form><div className='project-list-shot modpack-list'>{results.map((project) => <article className='project-row-shot' key={project.projectId}>{project.iconUrl ? <img src={project.iconUrl} alt='' /> : <span className='result-icon-shot'><Box size={18} /></span>}<div><strong>{project.title}</strong><small>{project.author ?? 'Modrinth'} · 내부 파일을 mods/resourcePacks/shaders로 분해</small></div><button disabled={busy} onClick={() => void select(project)}>선택</button></article>)}<div className='load-more-shot' ref={loadMoreRef}>{busy ? '불러오는 중...' : hasMore ? '더 불러오는 중...' : '끝'}</div></div><button className='ghost-button' onClick={onBack}>뒤로</button></section>;
 }
 
@@ -213,39 +221,69 @@ export function ConsoleApp() {
   const [activeTab, setActiveTab] = useState<AssetKind>('shaders');
   const [mobileSection, setMobileSection] = useState<MobileSection>('settings');
   const [dirty, setDirty] = useState(false);
-  const [statusText, setStatusText] = useState('서버 연결 대기 중');
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>(null);
+  const [statusText, setStatusText] = useState('자동 저장 대기 중');
   const [isSaving, setIsSaving] = useState(false);
-  const [saveDone, setSaveDone] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<LauncherProfile | null>(null);
   const [meta, setMeta] = useState<LauncherMeta | null>(null);
-  const [openPanels, setOpenPanels] = useState<OpenPanels>({ profile: true, permissions: true });
-  const saveDoneTimer = useRef<number | null>(null);
+  const [openPanels, setOpenPanels] = useState<OpenPanels>({ profile: true, permissions: true, manage: false });
+  const autosaveTimer = useRef<number | null>(null);
   const selected = profiles.find((profile) => profile.id === selectedId) ?? profiles[0];
-  function flashSaved() {
-    if (saveDoneTimer.current) window.clearTimeout(saveDoneTimer.current);
-    setSaveDone(true);
-    saveDoneTimer.current = window.setTimeout(() => setSaveDone(false), 1000);
-  }
-  useEffect(() => () => { if (saveDoneTimer.current) window.clearTimeout(saveDoneTimer.current); }, []);
+
   useEffect(() => { void loadLauncherMeta().then(setMeta).catch(() => undefined); }, []);
   useEffect(() => { if (selected?.minecraftVersion) void loadLauncherMeta(selected.minecraftVersion).then(setMeta).catch(() => undefined); }, [selected?.minecraftVersion]);
-  async function reload() { setStatusText('불러오는 중...'); const result = await loadProfiles(); setProfiles(result.profiles); setSelectedId(result.profiles[0]?.id ?? ''); setDirty(false); setReorderMode(false); setView('home'); setMobileSection('settings'); setStatusText(result.source === 'local' ? '서버 로컬 저장소에서 불러옴' : '아직 저장된 프로필 없음'); }
+  useEffect(() => () => { if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current); }, []);
+
+  async function reload() {
+    setStatusText('불러오는 중...');
+    const result = await loadProfiles();
+    const next = profilesForSave(result.profiles);
+    setProfiles(next);
+    setSelectedId(next[0]?.id ?? '');
+    setDirty(false);
+    setReorderMode(false);
+    setView('home');
+    setMobileSection('settings');
+    setStatusText(result.source === 'local' ? '서버 로컬 저장소에서 불러옴' : '아직 저장된 프로필 없음');
+  }
+
   useEffect(() => { if (sessionReady) reload().catch((error) => setStatusText(error instanceof Error ? error.message : '불러오기 실패')); }, [sessionReady]);
-  function setProfile(next: LauncherProfile) { setProfiles((items) => items.map((item) => item.id === selected?.id ? next : item)); setSelectedId(next.id); setDirty(true); }
-  function createCustomProfile() { const profile = createEmptyProfile(); if (meta?.minecraft.latestRelease) { profile.minecraftVersion = meta.minecraft.latestRelease; profile.javaVersion = guessJavaVersion(profile.minecraftVersion); profile.modLoaderVersion = latestLoader(meta, profile.modLoader) || profile.modLoaderVersion; } setProfiles((items) => [...items, profile]); setSelectedId(profile.id); setView('editor'); setMobileSection('settings'); setDirty(true); }
-  function createModpackProfile(profile: LauncherProfile) { setProfiles((items) => [...items, profile]); setSelectedId(profile.id); setView('editor'); setMobileSection('settings'); setDirty(true); }
+
+  async function persistProfiles(nextProfiles: ProfilesManifest, savingText = '자동 저장 중...', successText = '저장됨') {
+    setIsSaving(true);
+    setStatusText(savingText);
+    const normalized = profilesForSave(nextProfiles);
+    try {
+      const result = await saveProfiles(normalized);
+      setDirty(false);
+      setStatusText(result.deletedProfileUploads ? `${successText} · 삭제 프로필 파일 ${result.deletedProfileUploads}개 정리` : successText);
+    } catch (error) {
+      setDirty(true);
+      setStatusText(error instanceof Error ? error.message : '저장 실패');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!sessionReady || !dirty || isSaving) return;
+    if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = window.setTimeout(() => void persistProfiles(profiles), AUTOSAVE_DELAY_MS);
+  }, [dirty, profiles, sessionReady, isSaving]);
+
+  function setProfile(next: LauncherProfile) { const normalized = withAlwaysEditable(next); setProfiles((items) => items.map((item) => item.id === selected?.id ? normalized : item)); setSelectedId(normalized.id); setDirty(true); setStatusText('변경됨 · 자동 저장 예정'); }
+  function createCustomProfile() { const profile = withAlwaysEditable(createEmptyProfile()); if (meta?.minecraft.latestRelease) { profile.minecraftVersion = meta.minecraft.latestRelease; profile.javaVersion = guessJavaVersion(profile.minecraftVersion); profile.modLoaderVersion = latestLoader(meta, profile.modLoader) || profile.modLoaderVersion; } setProfiles((items) => [...items, profile]); setSelectedId(profile.id); setView('editor'); setMobileSection('settings'); setDirty(true); }
+  function createModpackProfile(profile: LauncherProfile) { const next = withAlwaysEditable(profile); setProfiles((items) => [...items, next]); setSelectedId(next.id); setView('editor'); setMobileSection('settings'); setDirty(true); }
   function openProfile(id: string) { if (reorderMode) return; setSelectedId(id); setView('editor'); setMobileSection('settings'); }
   function selectMobile(section: MobileSection) { setMobileSection(section); if (section !== 'settings') setActiveTab(section); }
   function selectAssetTab(tab: AssetKind) { setActiveTab(tab); setMobileSection(tab); }
-  async function persistProfiles(nextProfiles: ProfilesManifest, savingText = '서버에 저장 중...', successText = '서버 저장 완료') { setIsSaving(true); setStatusText(savingText); try { const result = await saveProfiles(nextProfiles); setDirty(false); const deletedText = result.deletedProfileUploads ? ` · 삭제 프로필 파일 ${result.deletedProfileUploads}개 정리` : ''; setStatusText(`${successText}${deletedText}`); setSaveStatus({ type: 'success', message: '저장됨', sha: result.sha }); flashSaved(); } catch (error) { const message = error instanceof Error ? error.message : '저장 실패'; setDirty(true); setStatusText(message); setSaveStatus({ type: 'error', message }); } finally { setIsSaving(false); } }
-  function moveProfile(index: number, offset: -1 | 1) { const target = index + offset; if (target < 0 || target >= profiles.length) return; const next = [...profiles]; const current = next[index]; next[index] = next[target]; next[target] = current; setProfiles(next); setDirty(false); setStatusText('프로필 순서 자동 저장 중...'); void persistProfiles(next, '프로필 순서 자동 저장 중...', '프로필 순서 저장됨'); }
-  function duplicate() { if (!selected) return; const profile = clone(selected); profile.id = `${selected.id}-copy-${Date.now().toString().slice(-4)}`; profile.name = `${selected.name} Copy`; setProfiles((items) => [...items, profile]); setSelectedId(profile.id); setView('editor'); setMobileSection('settings'); setDirty(true); }
-  function confirmRemove() { if (!deleteTarget) return; setProfiles((items) => items.filter((item) => item.id !== deleteTarget.id)); setSelectedId(''); setDeleteTarget(null); setView('home'); setMobileSection('settings'); setDirty(true); setStatusText('프로필 삭제됨. 저장하면 서버 업로드 파일도 정리됩니다.'); }
-  function exportJson() { void navigator.clipboard.writeText(JSON.stringify(profiles, null, 2)); setStatusText('JSON 클립보드 복사 완료'); }
+  function moveProfile(index: number, offset: -1 | 1) { const target = index + offset; if (target < 0 || target >= profiles.length) return; const next = [...profiles]; const current = next[index]; next[index] = next[target]; next[target] = current; setProfiles(next); setDirty(true); setStatusText('순서 변경됨 · 자동 저장 예정'); }
+  function duplicate() { if (!selected) return; const profile = withAlwaysEditable(clone(selected)); profile.id = `${selected.id}-copy-${Date.now().toString().slice(-4)}`; profile.name = `${selected.name} Copy`; setProfiles((items) => [...items, profile]); setSelectedId(profile.id); setView('editor'); setMobileSection('settings'); setDirty(true); }
+  function confirmRemove() { if (!deleteTarget) return; setProfiles((items) => items.filter((item) => item.id !== deleteTarget.id)); setSelectedId(''); setDeleteTarget(null); setView('home'); setMobileSection('settings'); setDirty(true); setStatusText('프로필 삭제됨 · 자동 저장 예정'); }
+  function exportJson() { void navigator.clipboard.writeText(JSON.stringify(profilesForSave(profiles), null, 2)); setStatusText('JSON 클립보드 복사 완료'); }
   function toggleReorderMode() { setView('home'); setReorderMode((value) => !value); setMenuOpen(false); }
+
   async function updateModpack() {
     if (!selected?.modpack) return;
     if (selected.modpack.source !== 'modrinth') { setStatusText('현재 CurseForge 모드팩 업데이트는 아직 준비 중입니다.'); return; }
@@ -253,11 +291,12 @@ export function ConsoleApp() {
     setStatusText('모드팩 업데이트 확인 중...');
     try {
       const updated = await createProfileFromModrinthModpack(project);
-      setProfile({ ...selected, mods: mergeModpackAssets(selected.mods, updated.mods, selected), resourcePacks: mergeModpackAssets(selected.resourcePacks, updated.resourcePacks, selected), shaders: mergeModpackAssets(selected.shaders, updated.shaders, selected), modpack: updated.modpack ?? selected.modpack });
+      setProfile(withAlwaysEditable({ ...selected, mods: mergeModpackAssets(selected.mods, updated.mods, selected), resourcePacks: mergeModpackAssets(selected.resourcePacks, updated.resourcePacks, selected), shaders: mergeModpackAssets(selected.shaders, updated.shaders, selected), modpack: updated.modpack ?? selected.modpack }));
       setStatusText('모드팩 포함 파일만 업데이트됨. 직접 추가한 파일은 유지했습니다.');
     } catch (error) { setStatusText(error instanceof Error ? error.message : '모드팩 업데이트 실패'); }
   }
-  async function save() { await persistProfiles(profiles); }
+
   if (!sessionReady) return <LoginScreen onDone={() => setSessionReady(true)} />;
-  return <main className='app-v2 notion-bg'><TopBar view={view} dirty={dirty} status={saveStatus} isSaving={isSaving} saveDone={saveDone} onHome={() => setView('home')} onSave={save} onMenu={() => setMenuOpen(true)} />{menuOpen && <div className='mobile-sheet-backdrop' onClick={() => setMenuOpen(false)}><div className='mobile-sheet console-mobile-menu' onClick={(event) => event.stopPropagation()}><button className='sheet-close' onClick={() => setMenuOpen(false)}><X /></button><div className='mobile-menu-heading'><strong>콘솔 메뉴</strong><span>{dirty ? '저장 필요' : '동기화됨'}</span></div><button onClick={toggleReorderMode}><ArrowUp size={16} />{reorderMode ? '위치 변경 끄기' : '위치 변경'}</button><button onClick={() => { exportJson(); setMenuOpen(false); }}><Copy size={16} />프로필 JSON 복사</button><button onClick={() => { setMenuOpen(false); void reload().catch((error) => setStatusText(error instanceof Error ? error.message : '불러오기 실패')); }}><RefreshCcw size={16} />서버에서 다시 불러오기</button><button className='mobile-menu-danger' onClick={() => { clearSession(); setMenuOpen(false); setSessionReady(false); }}><LogOut size={16} />로그아웃</button></div></div>}{deleteTarget && <ConfirmDeleteModal profile={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={confirmRemove} />}{view === 'home' && <HomeView profiles={profiles} reorderMode={reorderMode} onNew={() => setView('new')} onOpen={openProfile} onMove={moveProfile} onToggleReorder={toggleReorderMode} />}{view === 'new' && <NewProfileChoice onCustom={createCustomProfile} onModpack={() => setView('modpack')} onBack={() => setView('home')} />}{view === 'modpack' && <ModpackPicker onBack={() => setView('new')} onCreate={createModpackProfile} />}{view === 'editor' && selected && <><section className='profile-section-v2 compact-profile-header'><div className='section-title-row'><h2><Box size={18} />{selected.name}</h2><span>{dirty ? '수정됨' : '동기화됨'}</span></div><div className='quick-actions-v2'><button onClick={duplicate}>복제</button><button className='danger-text' onClick={() => setDeleteTarget(selected)}>삭제</button></div></section><div className='workspace-v2 launcher-style-workspace editor-no-page-scroll'><ProfileSettings profile={selected} meta={meta} openPanels={openPanels} setOpenPanels={setOpenPanels} onChange={setProfile} onUpdateModpack={() => void updateModpack()} mobileActive={mobileSection === 'settings'} /><section className={`content-column content-column-fixed mobile-pane ${mobileSection === 'settings' ? 'mobile-pane-hidden' : 'mobile-pane-active'}`}><div className='notion-card tab-shell-shot'>{tabs.map((tab) => <button key={tab.id} className={activeTab === tab.id ? 'active' : ''} onClick={() => selectAssetTab(tab.id)}>{tab.label}<b>{selected[tab.id].length}</b></button>)}</div><ContentLibraryPanel profile={selected} kind={activeTab} onChange={setProfile} /></section></div><p className='status-box editor-status-box'>{statusText}</p><MobileEditorNav profile={selected} active={mobileSection} onSelect={selectMobile} /></>}</main>;
+
+  return <main className='app-v2 notion-bg'><TopBar onHome={() => setView('home')} onMenu={() => setMenuOpen(true)} />{menuOpen && <div className='mobile-sheet-backdrop' onClick={() => setMenuOpen(false)}><div className='mobile-sheet console-mobile-menu' onClick={(event) => event.stopPropagation()}><button className='sheet-close' onClick={() => setMenuOpen(false)}><X /></button><div className='mobile-menu-heading'><strong>메뉴</strong><span>{isSaving ? '저장 중' : dirty ? '변경됨' : '저장됨'}</span></div><button onClick={toggleReorderMode}><ArrowUp size={16} />{reorderMode ? '위치 변경 끄기' : '위치 변경'}</button><button onClick={() => { exportJson(); setMenuOpen(false); }}><Copy size={16} />프로필 JSON 복사</button><button onClick={() => { setMenuOpen(false); void reload().catch((error) => setStatusText(error instanceof Error ? error.message : '불러오기 실패')); }}><RefreshCcw size={16} />서버에서 다시 불러오기</button><button className='mobile-menu-danger' onClick={() => { clearSession(); setMenuOpen(false); setSessionReady(false); }}><LogOut size={16} />로그아웃</button></div></div>}{deleteTarget && <ConfirmDeleteModal profile={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={confirmRemove} />}{view === 'home' && <HomeView profiles={profiles} reorderMode={reorderMode} onNew={() => setView('new')} onOpen={openProfile} onMove={moveProfile} onToggleReorder={toggleReorderMode} />}{view === 'new' && <NewProfileChoice onCustom={createCustomProfile} onModpack={() => setView('modpack')} onBack={() => setView('home')} />}{view === 'modpack' && <ModpackPicker onBack={() => setView('new')} onCreate={createModpackProfile} />}{view === 'editor' && selected && <><section className='profile-section-v2 compact-profile-header' style={{ '--accent': selected.accentColor } as React.CSSProperties}><div className='section-title-row'><h2><Box size={18} />{selected.name}</h2></div></section><div className='workspace-v2 launcher-style-workspace editor-no-page-scroll' style={{ '--accent': selected.accentColor } as React.CSSProperties}><ProfileSettings profile={selected} meta={meta} openPanels={openPanels} setOpenPanels={setOpenPanels} onChange={setProfile} onUpdateModpack={() => void updateModpack()} onDuplicate={duplicate} onDelete={() => setDeleteTarget(selected)} mobileActive={mobileSection === 'settings'} /><section className={`content-column content-column-fixed mobile-pane ${mobileSection === 'settings' ? 'mobile-pane-hidden' : 'mobile-pane-active'}`}><div className='notion-card tab-shell-shot'>{tabs.map((tab) => <button key={tab.id} className={activeTab === tab.id ? 'active' : ''} onClick={() => selectAssetTab(tab.id)}>{tab.label}<b>{selected[tab.id].length}</b></button>)}</div><ContentLibraryPanel profile={selected} kind={activeTab} onChange={setProfile} /></section></div><p className='status-box editor-status-box'>{isSaving ? '자동 저장 중...' : statusText}</p><MobileEditorNav profile={selected} active={mobileSection} onSelect={selectMobile} /></>}</main>;
 }
