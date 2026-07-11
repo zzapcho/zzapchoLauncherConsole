@@ -37,6 +37,15 @@
   transform: translateX(16px) !important;
 }
 
+#fresh-console .fc-vanilla-blocked-tab {
+  opacity: 0.38 !important;
+  filter: grayscale(1) !important;
+}
+
+#fresh-console.fc-loader-vanilla .fc-assets-head span::after {
+  content: " · 바닐라는 리팩만 권장";
+}
+
 @media (max-width: 860px) {
   #fresh-console .fc-asset-row {
     grid-template-columns: 40px minmax(0, 1fr) 50px 34px !important;
