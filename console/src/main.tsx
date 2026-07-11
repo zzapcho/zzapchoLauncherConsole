@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { registerPwa } from "./pwa";
 import { registerJavaRuntimeLabelFix } from "./javaRuntimeLabel";
+import { registerVanillaGuard } from "./vanillaGuard";
 import "./index.css";
 import "./launcherContent.css";
 import "./homeFlow.css";
@@ -20,6 +21,7 @@ import "./consoleMinimal.css";
 
 registerPwa();
 registerJavaRuntimeLabelFix();
+registerVanillaGuard();
 
 const appRoot = document.getElementById("root");
 if (!appRoot) throw new Error("app root element not found");
