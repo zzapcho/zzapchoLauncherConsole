@@ -81,7 +81,7 @@ export type ProfilesManifest = LauncherProfile[];
 export const MOD_LOADERS: ModLoader[] = ["vanilla", "fabric", "forge", "quilt"];
 
 export const DEFAULT_EDITABLE_FIELDS: EditableFields = {
-  server: false,
+  server: true,
   mods: false,
   resourcePacks: true,
   shaders: true,
@@ -95,6 +95,7 @@ export function guessJavaVersion(minecraftVersion: string) {
   const [majorRaw, minorRaw] = minecraftVersion.split(".");
   const major = Number(majorRaw);
   const minor = Number(minorRaw);
+  if (major >= 25) return 25;
   if (major > 1 || minor >= 20) return 21;
   if (minor >= 18) return 17;
   return 8;
