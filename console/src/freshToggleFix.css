@@ -1,0 +1,44 @@
+#fresh-console .fc-toggle.icon-only {
+  width: 50px !important;
+  min-width: 50px !important;
+  max-width: 50px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#fresh-console .fc-toggle.icon-only span {
+  display: none !important;
+}
+
+#fresh-console .fc-toggle.icon-only b {
+  width: 38px !important;
+  min-width: 38px !important;
+  height: 22px !important;
+  margin: 0 !important;
+  border-radius: 999px !important;
+  background: #303949 !important;
+}
+
+#fresh-console .fc-toggle.icon-only b::after {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 3px !important;
+}
+
+#fresh-console .fc-toggle.icon-only.on b {
+  background: var(--accent, #7dd3fc) !important;
+}
+
+#fresh-console .fc-toggle.icon-only.on b::after {
+  transform: translateX(16px) !important;
+}
+
+@media (max-width: 860px) {
+  #fresh-console .fc-asset-row {
+    grid-template-columns: 40px minmax(0, 1fr) 50px 34px !important;
+  }
+}
