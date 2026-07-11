@@ -14,6 +14,13 @@ export interface ExternalProject {
   projectType: ProjectKind;
   author?: string;
   follows?: number;
+  fileId?: string;
+  fileName?: string;
+  fileVersion?: string;
+  downloadUrl?: string;
+  sha1?: string;
+  sha256?: string;
+  gameVersions?: string[];
 }
 
 export interface AssetVersionOption {
@@ -23,6 +30,7 @@ export interface AssetVersionOption {
   url: string;
   sha1?: string;
   sha512?: string;
+  gameVersions?: string[];
 }
 
 export interface ModpackProfileSeed {
@@ -97,6 +105,10 @@ function projectPage(slugOrId: string) {
   return `https://modrinth.com/project/${slugOrId}`;
 }
 
+function curseForgePage(slugOrId: string) {
+  return `https://www.curseforge.com/minecraft/search?search=${encodeURIComponent(slugOrId)}`;
+}
+
 function mapSearchHit(hit: ModrinthSearchHit): ExternalProject {
   return {
     source: "modrinth",
@@ -121,7 +133,21 @@ function versionToOption(version: ModrinthVersion): AssetVersionOption | null {
     url: file.url,
     sha1: file.hashes?.sha1,
     sha512: file.hashes?.sha512,
+    gameVersions: version.game_versions ?? [],
   };
+}
+
+function versionPreview(gameVersions: string[]) {
+  if (!gameVersions.length) return "알 수 없음";
+  return gameVersions.slice(0, 5).join(", ") + (gameVersions.length > 5 ? ` 외 ${gameVersions.length - 5}개` : "");
+}
+
+function displayVersion(option: AssetVersionOption, profile: LauncherProfile, relaxed: boolean) {
+  if (!relaxed) return option.version;
+  const supported = option.gameVersions ?? [];
+  const supportText = `지원 ${versionPreview(supported)}`;
+  if (supported.length && !supported.includes(profile.minecraftVersion)) return `${option.version} · ${supportText} · ⚠ 현재 ${profile.minecraftVersion}와 다름`;
+  return `${option.version} · ${supportText}`;
 }
 
 export async function searchModrinthProjects(kind: ProjectKind, query = "", offset = 0, limit = 12): Promise<ExternalProject[]> {
@@ -154,6 +180,12 @@ async function fetchCompatibleVersions(projectIdOrSlug: string, profile: Launche
   return response.json() as Promise<ModrinthVersion[]>;
 }
 
+async function fetchAnyVersions(projectIdOrSlug: string): Promise<ModrinthVersion[]> {
+  const response = await fetch(`https://api.modrinth.com/v2/project/${projectIdOrSlug}/version`);
+  if (!response.ok) throw new Error("Modrinth version lookup failed");
+  return response.json() as Promise<ModrinthVersion[]>;
+}
+
 export async function getModrinthVersionOptions(asset: LauncherAsset, profile: LauncherProfile): Promise<AssetVersionOption[]> {
   const project = asset.projectId ?? asset.id;
   const versions = await fetchCompatibleVersions(project, profile);
@@ -182,14 +214,16 @@ export async function getLatestModrinthAsset(asset: LauncherAsset, profile: Laun
 }
 
 export async function getModrinthAsset(project: ExternalProject, profile: LauncherProfile): Promise<LauncherAsset> {
-  const versions = await fetchCompatibleVersions(project.slug, profile);
+  const relaxed = project.projectType === "resourcepack" || project.projectType === "shader";
+  const versions = relaxed ? await fetchAnyVersions(project.slug) : await fetchCompatibleVersions(project.slug, profile);
   const version = versions[0];
   const option = version ? versionToOption(version) : null;
-  if (!version || !option) throw new Error(`${project.title}: MC ${profile.minecraftVersion} / ${profile.modLoader}에 맞는 파일이 없습니다.`);
+  if (!version || !option) throw new Error(`${project.title}: 설치할 파일이 없습니다.`);
+  if (!relaxed && !(version.game_versions ?? []).includes(profile.minecraftVersion)) throw new Error(`${project.title}: MC ${profile.minecraftVersion} / ${profile.modLoader}에 맞는 파일이 없습니다.`);
   return {
     id: project.slug,
     name: project.title,
-    version: option.version,
+    version: displayVersion(option, profile, relaxed),
     required: true,
     url: option.url,
     sha1: option.sha1,
@@ -200,6 +234,27 @@ export async function getModrinthAsset(project: ExternalProject, profile: Launch
     fileName: option.fileName,
     iconUrl: project.iconUrl,
     projectUrl: projectPage(project.slug),
+  };
+}
+
+export function getCurseForgeAsset(project: ExternalProject): LauncherAsset {
+  const fileName = project.fileName ?? `${project.slug}.jar`;
+  const url = project.downloadUrl ?? `curseforge://${project.projectId}/${project.fileId ?? "latest"}`;
+  const support = project.gameVersions?.length ? ` · 지원 ${versionPreview(project.gameVersions)}` : "";
+  return {
+    id: `curseforge-${project.projectId}`,
+    name: project.title,
+    version: `${project.fileVersion ?? fileName}${support}`,
+    required: true,
+    url,
+    sha1: project.sha1,
+    sha256: project.sha256,
+    source: "curseforge",
+    projectId: project.projectId,
+    fileId: project.fileId,
+    fileName,
+    iconUrl: project.iconUrl,
+    projectUrl: curseForgePage(project.slug ?? project.projectId),
   };
 }
 
