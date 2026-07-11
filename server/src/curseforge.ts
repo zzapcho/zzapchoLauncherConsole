@@ -16,6 +16,7 @@ export interface CurseForgeProjectResult {
   downloadUrl?: string;
   sha1?: string;
   sha256?: string;
+  gameVersions?: string[];
 }
 
 const CLASS_IDS = {
@@ -66,6 +67,18 @@ function fileSha(hashes: CurseForgeFile["hashes"], algo: number) {
   return hashes?.find((hash) => hash.algo === algo)?.value;
 }
 
+function versionPreview(gameVersions?: string[]) {
+  const versions = gameVersions ?? [];
+  if (!versions.length) return "";
+  return versions.slice(0, 5).join(", ") + (versions.length > 5 ? ` 외 ${versions.length - 5}개` : "");
+}
+
+function fileVersionLabel(file: CurseForgeFile) {
+  const base = file.displayName ?? file.fileName;
+  const preview = versionPreview(file.gameVersions);
+  return preview ? `${base} · 지원 ${preview}` : base;
+}
+
 function pickBestFile(files: CurseForgeFile[], minecraftVersion: string, modLoader: ModLoader) {
   const loader = modLoader.toLowerCase();
   return files.find((file) => file.downloadUrl && file.gameVersions?.includes(minecraftVersion) && file.gameVersions?.some((version) => version.toLowerCase() === loader))
@@ -81,10 +94,11 @@ function latestFileInfo(files?: CurseForgeFile[]) {
   return {
     fileId: String(file.id),
     fileName: file.fileName,
-    fileVersion: file.displayName ?? file.fileName,
+    fileVersion: fileVersionLabel(file),
     downloadUrl: file.downloadUrl ?? undefined,
     sha1: fileSha(file.hashes, 1),
     sha256: fileSha(file.hashes, 2),
+    gameVersions: file.gameVersions ?? [],
   };
 }
 
@@ -165,7 +179,7 @@ export async function resolveCurseForgeAsset(input: {
   return {
     id: `curseforge-${input.projectId}`,
     name: input.title ?? file.displayName ?? file.fileName.replace(/\.(jar|zip)$/i, ""),
-    version: file.displayName ?? file.fileName,
+    version: fileVersionLabel(file),
     required: true,
     url: downloadUrl,
     sha1: fileSha(file.hashes, 1),
