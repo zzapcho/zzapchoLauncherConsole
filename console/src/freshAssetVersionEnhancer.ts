@@ -23,6 +23,12 @@ const labelToKind: Record<string, AssetKind> = {
   "쉐이더": "shaders",
 };
 
+const kindMeta: Record<AssetKind, { label: string; ext: string; source: LauncherAsset["source"] }> = {
+  mods: { label: "모드", ext: ".jar", source: "manual" },
+  resourcePacks: { label: "리소스팩", ext: ".zip", source: "manual" },
+  shaders: { label: "쉐이더", ext: ".zip", source: "manual" },
+};
+
 let profilesCache: ProfilesManifest | null = null;
 let loading = false;
 let registered = false;
@@ -33,7 +39,7 @@ function stripCount(value: string) {
 }
 
 function cleanVersion(value: string) {
-  return value.replace(/\s·\s지원\s.*$/u, "").replace(/\s·\s⚠\s.*$/u, "").trim();
+  return value.replace(/\s·\s지원\s.*$/u, "").replace(/\s·\s⚠\s.*$/u, "").replace(/\s·\s⚠$/u, "").trim();
 }
 
 function activeProfileName() {
@@ -45,24 +51,21 @@ function activeKind(): AssetKind | null {
   return labelToKind[label] ?? null;
 }
 
-function fullSupportTitle(asset: LauncherAsset) {
+function fullSupportTitle(profile: LauncherProfile, asset: LauncherAsset) {
   const versions = asset.supportedGameVersions ?? [];
-  if (!versions.length) return "클릭해서 버전을 수정";
-  return `지원 버전: ${versions.join(", ")}\n클릭해서 버전 수정`;
-}
-
-function shortSupportLabel(versions: string[]) {
-  if (!versions.length) return "";
-  if (versions.length <= 3) return `지원 ${versions.join(", ")}`;
-  return `지원 ${versions[0]} 외 ${versions.length - 1}개`;
+  const lines = [`버전: ${cleanVersion(asset.version || asset.fileName || "버전 없음")}`, "클릭해서 버전 수정"];
+  if (versions.length) {
+    lines.unshift(`지원 버전: ${versions.join(", ")}`);
+    if (!versions.includes(profile.minecraftVersion)) lines.unshift(`⚠ 현재 프로필 ${profile.minecraftVersion}와 지원 버전이 다름`);
+  }
+  return lines.join("\n");
 }
 
 function displayVersion(profile: LauncherProfile, asset: LauncherAsset) {
-  const base = asset.version || asset.fileName || asset.source || "버전 없음";
+  const base = cleanVersion(asset.version || asset.fileName || asset.source || "버전 없음");
   const versions = asset.supportedGameVersions ?? [];
-  if (!versions.length || base.includes("지원 ")) return base;
-  const warning = versions.includes(profile.minecraftVersion) ? "" : ` · ⚠ 현재 ${profile.minecraftVersion}와 다름`;
-  return `${base} · ${shortSupportLabel(versions)}${warning}`;
+  const warning = versions.length > 0 && !versions.includes(profile.minecraftVersion);
+  return warning ? `${base} · ⚠` : base;
 }
 
 async function ensureProfiles() {
@@ -75,6 +78,12 @@ async function ensureProfiles() {
   } finally {
     loading = false;
   }
+}
+
+async function freshProfiles() {
+  const profiles = (await loadProfiles()).profiles;
+  profilesCache = profiles;
+  return profiles;
 }
 
 function findProfile() {
@@ -96,6 +105,12 @@ async function fetchModrinthVersions(asset: LauncherAsset) {
   const response = await fetch(`https://api.modrinth.com/v2/project/${encodeURIComponent(project)}/version`);
   if (!response.ok) return [];
   return response.json() as Promise<ModrinthVersion[]>;
+}
+
+function shortSupportLabel(versions: string[]) {
+  if (!versions.length) return "지원 버전 알 수 없음";
+  if (versions.length <= 3) return `지원 ${versions.join(", ")}`;
+  return `지원 ${versions[0]} 외 ${versions.length - 1}개`;
 }
 
 function optionPreview(version: ModrinthVersion) {
@@ -143,7 +158,7 @@ async function editVersion(profile: LauncherProfile, kind: AssetKind, asset: Lau
   const trimmed = next.trim();
   if (!trimmed) return;
 
-  const profiles = profilesCache ?? (await loadProfiles()).profiles;
+  const profiles = profilesCache ?? (await freshProfiles());
   const profileIndex = profiles.findIndex((item) => item.id === profile.id);
   if (profileIndex < 0) return;
 
@@ -163,8 +178,98 @@ async function editVersion(profile: LauncherProfile, kind: AssetKind, asset: Lau
   enhanceNow();
 }
 
+function urlFileName(rawUrl: string) {
+  try {
+    const url = new URL(rawUrl);
+    const last = decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() ?? "");
+    return last || `linked-file-${Date.now()}`;
+  } catch {
+    const last = rawUrl.split("?")[0].split("/").filter(Boolean).pop() ?? "";
+    return decodeURIComponent(last) || `linked-file-${Date.now()}`;
+  }
+}
+
+function nameFromFileName(fileName: string) {
+  return fileName.replace(/\.(jar|zip)$/i, "").replace(/[-_]+/g, " ").trim() || fileName;
+}
+
+function isValidUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function makeLinkedAsset(kind: AssetKind, rawUrl: string): LauncherAsset {
+  const meta = kindMeta[kind];
+  const fileName = urlFileName(rawUrl);
+  if (!fileName.toLowerCase().endsWith(meta.ext)) {
+    throw new Error(`${meta.label} 링크는 ${meta.ext} 파일 링크여야 합니다.`);
+  }
+  return {
+    id: `link-${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name: nameFromFileName(fileName),
+    version: "link",
+    required: true,
+    url: rawUrl,
+    source: meta.source,
+    fileName,
+  };
+}
+
+async function addLinkAsset(button: HTMLButtonElement) {
+  const kind = activeKind();
+  const profile = findProfile();
+  if (!kind || !profile) return;
+
+  const raw = window.prompt(`${kindMeta[kind].label} 다운로드 파일 링크를 붙여넣기`, "https://");
+  if (raw === null) return;
+  const url = raw.trim();
+  if (!isValidUrl(url)) {
+    window.alert("http/https 파일 링크만 추가할 수 있음");
+    return;
+  }
+
+  try {
+    button.disabled = true;
+    button.textContent = "추가 중";
+    const profiles = await freshProfiles();
+    const profileIndex = profiles.findIndex((item) => item.id === profile.id);
+    if (profileIndex < 0) throw new Error("현재 프로필을 찾지 못했습니다.");
+    const nextProfiles = profiles.map((item) => ({ ...item }));
+    const targetProfile = { ...nextProfiles[profileIndex] };
+    targetProfile[kind] = [...targetProfile[kind], makeLinkedAsset(kind, url)] as never;
+    nextProfiles[profileIndex] = targetProfile;
+    await saveProfiles(nextProfiles);
+    profilesCache = nextProfiles;
+    button.textContent = "추가됨";
+    window.setTimeout(() => window.location.reload(), 350);
+  } catch (error) {
+    window.alert(error instanceof Error ? error.message : "링크 추가 실패");
+    button.textContent = "링크";
+    button.disabled = false;
+  }
+}
+
+function ensureLinkButton() {
+  const bar = document.querySelector<HTMLElement>("#fresh-console .fc-library-bar");
+  if (!bar || bar.querySelector(".fc-link-add-button")) return;
+  const uploadButton = bar.querySelector<HTMLButtonElement>("button.fc-soft");
+  if (!uploadButton) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "fc-soft fc-link-add-button";
+  button.textContent = "링크";
+  button.title = "다운로드 파일 링크로 추가";
+  button.addEventListener("click", () => void addLinkAsset(button));
+  uploadButton.insertAdjacentElement("afterend", button);
+}
+
 function enhanceNow() {
   void ensureProfiles();
+  ensureLinkButton();
   const profile = findProfile();
   const kind = activeKind();
   if (!profile || !kind) return;
@@ -178,7 +283,7 @@ function enhanceNow() {
 
     const text = displayVersion(profile, asset);
     if (chip.textContent !== text) chip.textContent = text;
-    chip.title = fullSupportTitle(asset);
+    chip.title = fullSupportTitle(profile, asset);
     chip.classList.add("fc-version-chip");
     chip.classList.toggle("has-warning", text.includes("⚠"));
     if (chip.dataset.versionEnhancer === "1") return;
