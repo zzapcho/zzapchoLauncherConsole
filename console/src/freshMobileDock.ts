@@ -131,7 +131,7 @@ export function registerFreshMobileDock() {
   if (registered || typeof window === "undefined") return;
   registered = true;
   const observer = new MutationObserver(schedule);
-  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "disabled"] });
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "disabled"] });
   window.addEventListener("resize", schedule, { passive: true });
   window.addEventListener("orientationchange", schedule, { passive: true });
   schedule();
