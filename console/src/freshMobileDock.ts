@@ -8,6 +8,7 @@ const dockItems: Array<{ id: DockPanel; label: string; tabLabel?: string }> = [
 ];
 
 let activePanel: DockPanel = "settings";
+let lastEditorKey = "";
 let raf = 0;
 let registered = false;
 
@@ -17,6 +18,14 @@ function mobile() {
 
 function root() {
   return document.getElementById("fresh-console");
+}
+
+function editorRoot() {
+  return document.querySelector<HTMLElement>("#fresh-console .fc-editor");
+}
+
+function editorKey(editor: HTMLElement) {
+  return editor.querySelector<HTMLElement>(".fc-editor-title h2")?.textContent?.trim() ?? "editor";
 }
 
 function vanillaMode() {
@@ -36,10 +45,6 @@ function cleanLabel(value: string) {
   return value.replace(/\d+/g, "").trim();
 }
 
-function editorRoot() {
-  return document.querySelector<HTMLElement>("#fresh-console .fc-editor");
-}
-
 function selectRealTab(editor: HTMLElement, panel: DockPanel) {
   const item = dockItems.find((candidate) => candidate.id === panel);
   if (!item?.tabLabel) return;
@@ -55,26 +60,39 @@ function countFor(editor: HTMLElement, panel: DockPanel) {
   return button?.querySelector("b")?.textContent?.trim() ?? "0";
 }
 
+function resetInlineVisibility(side: HTMLElement, main: HTMLElement) {
+  side.style.removeProperty("display");
+  main.style.removeProperty("display");
+}
+
 function setPanelVisibility(editor: HTMLElement) {
   const side = editor.querySelector<HTMLElement>(".fc-side");
   const main = editor.querySelector<HTMLElement>(".fc-main-panel");
   if (!side || !main) return;
 
   if (!mobile()) {
-    side.style.removeProperty("display");
-    main.style.removeProperty("display");
+    resetInlineVisibility(side, main);
     document.querySelector(".fc-mobile-dock")?.remove();
     return;
+  }
+
+  const key = editorKey(editor);
+  if (key !== lastEditorKey) {
+    lastEditorKey = key;
+    activePanel = "settings";
+    window.scrollTo({ top: 0, behavior: "auto" });
   }
 
   normalizeActivePanel();
   if (activePanel === "settings") {
     side.style.setProperty("display", "block", "important");
+    side.style.setProperty("visibility", "visible", "important");
     main.style.setProperty("display", "none", "important");
   } else {
     selectRealTab(editor, activePanel);
     side.style.setProperty("display", "none", "important");
     main.style.setProperty("display", "block", "important");
+    main.style.setProperty("visibility", "visible", "important");
   }
 }
 
@@ -115,11 +133,13 @@ function sync() {
   raf = 0;
   const editor = editorRoot();
   if (!editor) {
+    lastEditorKey = "";
+    activePanel = "settings";
     document.querySelector(".fc-mobile-dock")?.remove();
     return;
   }
-  ensureDock(editor);
   setPanelVisibility(editor);
+  ensureDock(editor);
 }
 
 function schedule() {
@@ -131,7 +151,8 @@ export function registerFreshMobileDock() {
   if (registered || typeof window === "undefined") return;
   registered = true;
   const observer = new MutationObserver(schedule);
-  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "disabled"] });
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "disabled", "style"] });
+  document.addEventListener("click", () => window.setTimeout(schedule, 0), true);
   window.addEventListener("resize", schedule, { passive: true });
   window.addEventListener("orientationchange", schedule, { passive: true });
   schedule();
