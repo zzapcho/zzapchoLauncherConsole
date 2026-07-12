@@ -1,0 +1,104 @@
+@media (max-width: 860px) {
+  #fresh-console .fc-shell:has(.fc-editor) {
+    padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important;
+  }
+
+  #fresh-console .fc-mobile-dock {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+    z-index: 5000 !important;
+    display: block !important;
+    padding: 8px !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 25px !important;
+    background: rgba(10, 13, 19, 0.96) !important;
+    backdrop-filter: blur(24px) !important;
+    box-shadow: 0 18px 58px rgba(0, 0, 0, 0.55) !important;
+    animation: fc-mobile-dock-in 180ms ease both;
+    pointer-events: auto !important;
+  }
+
+  #fresh-console .fc-mobile-dock-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  #fresh-console .fc-mobile-dock button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    min-width: 0 !important;
+    min-height: 48px !important;
+    padding: 0 4px !important;
+    border: 1px solid rgba(255, 255, 255, 0.11) !important;
+    border-radius: 18px !important;
+    background: #121925 !important;
+    color: #cbd5e1 !important;
+    font-size: 0.73rem !important;
+    font-weight: 950 !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+    transition: transform 150ms ease, background 150ms ease, border-color 150ms ease !important;
+  }
+
+  #fresh-console .fc-mobile-dock button.active {
+    border-color: color-mix(in srgb, var(--accent, #7dd3fc) 60%, rgba(255, 255, 255, 0.18)) !important;
+    background: color-mix(in srgb, var(--accent, #7dd3fc) 18%, #151f2c) !important;
+    color: #f8fafc !important;
+  }
+
+  #fresh-console .fc-mobile-dock button:active {
+    transform: scale(0.96) !important;
+  }
+
+  #fresh-console .fc-mobile-dock span {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  #fresh-console .fc-mobile-dock b {
+    min-width: 18px !important;
+    padding: 2px 5px !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    font-size: 0.64rem !important;
+    line-height: 1.2 !important;
+  }
+
+  #fresh-console .fc-tabs {
+    display: none !important;
+  }
+
+  #fresh-console .fc-editor-grid {
+    display: block !important;
+  }
+
+  #fresh-console .fc-toast {
+    bottom: calc(94px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (max-width: 380px) {
+  #fresh-console .fc-mobile-dock button:first-child span {
+    font-size: 0;
+  }
+
+  #fresh-console .fc-mobile-dock button:first-child span::before {
+    content: "기본";
+    font-size: 0.72rem;
+  }
+
+  #fresh-console .fc-mobile-dock button {
+    font-size: 0.71rem !important;
+  }
+}
+
+@keyframes fc-mobile-dock-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
