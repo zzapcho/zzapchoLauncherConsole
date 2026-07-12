@@ -23,6 +23,10 @@ function isBoolean(value: unknown): value is boolean {
   return typeof value === "boolean";
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(isString);
+}
+
 function isValidAssetArray(value: unknown, path: string, errors: string[]): value is LauncherAsset[] {
   if (!Array.isArray(value)) {
     errors.push(`${path} must be an array.`);
@@ -47,6 +51,7 @@ function isValidAssetArray(value: unknown, path: string, errors: string[]): valu
     if (asset.iconUrl !== undefined && !isString(asset.iconUrl)) errors.push(`${itemPath}.iconUrl must be a string.`);
     if (asset.projectUrl !== undefined && !isString(asset.projectUrl)) errors.push(`${itemPath}.projectUrl must be a string.`);
     if (asset.fromModpack !== undefined && !isBoolean(asset.fromModpack)) errors.push(`${itemPath}.fromModpack must be boolean.`);
+    if (asset.supportedGameVersions !== undefined && !isStringArray(asset.supportedGameVersions)) errors.push(`${itemPath}.supportedGameVersions must be string[].`);
   });
 
   return true;
