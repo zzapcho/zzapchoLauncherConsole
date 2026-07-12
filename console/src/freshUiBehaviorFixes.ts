@@ -39,6 +39,15 @@ function clickResourcePackTab() {
   if (target && !target.classList.contains("active")) target.click();
 }
 
+function setHidden(button: HTMLButtonElement, hidden: boolean) {
+  if (hidden) {
+    if (button.style.display !== "none") button.style.setProperty("display", "none", "important");
+  } else if (button.style.display === "none") {
+    button.style.removeProperty("display");
+  }
+  if (button.disabled !== hidden) button.disabled = hidden;
+}
+
 function applyVanillaMode() {
   const shell = root();
   const isVanilla = currentLoader() === "vanilla";
@@ -47,8 +56,7 @@ function applyVanillaMode() {
   for (const button of assetTabButtons()) {
     const label = tabLabel(button);
     const blocked = isVanilla && (label === "모드" || label === "쉐이더");
-    button.style.setProperty("display", blocked ? "none" : "", blocked ? "important" : "");
-    button.disabled = blocked;
+    setHidden(button, blocked);
     if (blocked && button.classList.contains("active")) clickResourcePackTab();
   }
 }
@@ -77,8 +85,9 @@ function ensureScrollTopButton() {
     return;
   }
 
-  const showingAssetPanel = getComputedStyle(editor.querySelector<HTMLElement>(".fc-main-panel") ?? editor).display !== "none";
-  if (!showingAssetPanel || shell.classList.contains("fc-profile-vanilla") && !document.querySelector("#fresh-console .fc-main-panel")) {
+  const mainPanel = editor.querySelector<HTMLElement>(".fc-main-panel");
+  const showingAssetPanel = mainPanel ? getComputedStyle(mainPanel).display !== "none" : false;
+  if (!showingAssetPanel) {
     button?.remove();
     return;
   }
@@ -111,7 +120,7 @@ export function registerFreshUiBehaviorFixes() {
   if (registered || typeof window === "undefined") return;
   registered = true;
   const observer = new MutationObserver(apply);
-  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "value"] });
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "value"] });
   document.addEventListener("change", apply, true);
   document.addEventListener("input", apply, true);
   window.addEventListener("resize", apply, { passive: true });
