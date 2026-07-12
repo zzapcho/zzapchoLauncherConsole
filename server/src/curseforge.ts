@@ -190,5 +190,6 @@ export async function resolveCurseForgeAsset(input: {
     fileName: file.fileName,
     iconUrl: input.iconUrl,
     projectUrl: projectUrl(input.slug ?? input.projectId),
+    supportedGameVersions: file.gameVersions ?? [],
   };
 }
