@@ -3,6 +3,20 @@ import type { LauncherAsset, LauncherProfile, ProfilesManifest } from "../../sha
 
 type AssetKind = "mods" | "resourcePacks" | "shaders";
 
+interface ModrinthVersionFile {
+  filename: string;
+  url: string;
+  hashes?: { sha1?: string; sha512?: string };
+  primary?: boolean;
+}
+
+interface ModrinthVersion {
+  id: string;
+  version_number: string;
+  game_versions?: string[];
+  files: ModrinthVersionFile[];
+}
+
 const labelToKind: Record<string, AssetKind> = {
   "모드": "mods",
   "리팩": "resourcePacks",
@@ -33,8 +47,8 @@ function activeKind(): AssetKind | null {
 
 function fullSupportTitle(asset: LauncherAsset) {
   const versions = asset.supportedGameVersions ?? [];
-  if (!versions.length) return "클릭해서 표시 버전을 수정";
-  return `지원 버전: ${versions.join(", ")}\n클릭해서 표시 버전 수정`;
+  if (!versions.length) return "클릭해서 버전을 수정";
+  return `지원 버전: ${versions.join(", ")}\n클릭해서 버전 수정`;
 }
 
 function shortSupportLabel(versions: string[]) {
@@ -73,9 +87,58 @@ function matchAsset(items: LauncherAsset[], row: HTMLElement, index: number) {
   return items[index] ?? items.find((asset) => asset.name === rowName) ?? null;
 }
 
+function versionFile(version: ModrinthVersion) {
+  return version.files.find((file) => file.primary) ?? version.files[0];
+}
+
+async function fetchModrinthVersions(asset: LauncherAsset) {
+  const project = asset.projectId ?? asset.id;
+  const response = await fetch(`https://api.modrinth.com/v2/project/${encodeURIComponent(project)}/version`);
+  if (!response.ok) return [];
+  return response.json() as Promise<ModrinthVersion[]>;
+}
+
+function optionPreview(version: ModrinthVersion) {
+  const support = version.game_versions?.length ? ` / ${shortSupportLabel(version.game_versions)}` : "";
+  return `${version.version_number}${support}`;
+}
+
+async function buildUpdatedAsset(asset: LauncherAsset, manualVersion: string) {
+  if (asset.source !== "modrinth" || !asset.projectId) return { ...asset, version: manualVersion };
+
+  const versions = await fetchModrinthVersions(asset);
+  const selected = versions.find((version) => version.version_number === manualVersion)
+    ?? versions.find((version) => version.files.some((file) => file.filename === manualVersion));
+  if (!selected) return { ...asset, version: manualVersion };
+
+  const file = versionFile(selected);
+  if (!file) return { ...asset, version: manualVersion, supportedGameVersions: selected.game_versions ?? [] };
+
+  return {
+    ...asset,
+    version: selected.version_number,
+    url: file.url,
+    sha1: file.hashes?.sha1,
+    sha512: file.hashes?.sha512,
+    fileId: selected.id,
+    fileName: file.filename,
+    supportedGameVersions: selected.game_versions ?? [],
+  };
+}
+
+async function askVersion(asset: LauncherAsset) {
+  if (asset.source !== "modrinth" || !asset.projectId) {
+    return window.prompt(`${asset.name} 표시 버전 수정`, cleanVersion(asset.version || asset.fileName || ""));
+  }
+
+  const versions = await fetchModrinthVersions(asset);
+  const preview = versions.slice(0, 18).map((version) => `- ${optionPreview(version)}`).join("\n");
+  const help = preview ? `\n\n사용 가능한 버전 예시:\n${preview}` : "";
+  return window.prompt(`${asset.name} 버전 입력\n버전 번호를 정확히 입력하면 파일 URL도 같이 바뀝니다.${help}`, cleanVersion(asset.version || asset.fileName || ""));
+}
+
 async function editVersion(profile: LauncherProfile, kind: AssetKind, asset: LauncherAsset, chip: HTMLElement) {
-  const current = cleanVersion(asset.version || asset.fileName || "");
-  const next = window.prompt(`${asset.name} 표시 버전 수정`, current);
+  const next = await askVersion(asset);
   if (next === null) return;
   const trimmed = next.trim();
   if (!trimmed) return;
@@ -90,7 +153,7 @@ async function editVersion(profile: LauncherProfile, kind: AssetKind, asset: Lau
   const assetIndex = nextItems.findIndex((item) => item.id === asset.id && item.name === asset.name);
   if (assetIndex < 0) return;
 
-  nextItems[assetIndex] = { ...nextItems[assetIndex], version: trimmed };
+  nextItems[assetIndex] = await buildUpdatedAsset(nextItems[assetIndex], trimmed);
   targetProfile[kind] = nextItems as never;
   nextProfiles[profileIndex] = targetProfile;
 
