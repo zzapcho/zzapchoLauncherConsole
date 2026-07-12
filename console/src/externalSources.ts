@@ -210,6 +210,7 @@ export async function getLatestModrinthAsset(asset: LauncherAsset, profile: Laun
     fileName: latest.fileName,
     iconUrl: project?.icon_url ?? asset.iconUrl,
     projectUrl: projectPage(project?.slug ?? asset.projectId ?? asset.id),
+    supportedGameVersions: latest.gameVersions ?? [],
   };
 }
 
@@ -234,6 +235,7 @@ export async function getModrinthAsset(project: ExternalProject, profile: Launch
     fileName: option.fileName,
     iconUrl: project.iconUrl,
     projectUrl: projectPage(project.slug),
+    supportedGameVersions: option.gameVersions ?? [],
   };
 }
 
@@ -255,6 +257,7 @@ export function getCurseForgeAsset(project: ExternalProject): LauncherAsset {
     fileName,
     iconUrl: project.iconUrl,
     projectUrl: curseForgePage(project.slug ?? project.projectId),
+    supportedGameVersions: project.gameVersions ?? [],
   };
 }
 
