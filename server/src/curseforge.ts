@@ -117,7 +117,7 @@ export async function searchCurseForge(query: string, kind: CurseForgeKind): Pro
   const params = new URLSearchParams({
     gameId: String(GAME_ID),
     classId: String(CLASS_IDS[kind]),
-    pageSize: "20",
+    pageSize: "50",
     sortField: "2",
     sortOrder: "desc",
   });
