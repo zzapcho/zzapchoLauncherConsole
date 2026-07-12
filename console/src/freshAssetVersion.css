@@ -1,0 +1,21 @@
+#fresh-console .fc-version-chip {
+  display: inline-block;
+  max-width: 100%;
+  cursor: pointer;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.22);
+  color: #aeb8c7;
+}
+
+#fresh-console .fc-version-chip:hover {
+  color: #eef2f7;
+  border-bottom-color: currentColor;
+}
+
+#fresh-console .fc-version-chip.has-warning {
+  color: #fbbf24;
+  border-bottom-color: rgba(251, 191, 36, 0.42);
+}
+
+#fresh-console .fc-version-chip.has-warning:hover {
+  color: #fde68a;
+}
