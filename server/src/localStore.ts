@@ -42,6 +42,7 @@ function normalizeAsset(value: unknown): LauncherAsset {
     ...(typeof item.iconUrl === "string" ? { iconUrl: item.iconUrl } : {}),
     ...(typeof item.projectUrl === "string" ? { projectUrl: item.projectUrl } : {}),
     ...(typeof item.fromModpack === "boolean" ? { fromModpack: item.fromModpack } : {}),
+    ...(Array.isArray(item.supportedGameVersions) ? { supportedGameVersions: item.supportedGameVersions.filter((entry): entry is string => typeof entry === "string") } : {}),
   };
 }
 
