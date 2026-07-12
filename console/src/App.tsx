@@ -11,6 +11,7 @@ import "./freshToggleFix.css";
 import "./freshAssetVersion.css";
 import "./freshMobileFinal.css";
 import "./freshMobileDock.css";
+import "./freshMobileDockSafe.css";
 import "./freshUiFixes.css";
 
 export function App() {
