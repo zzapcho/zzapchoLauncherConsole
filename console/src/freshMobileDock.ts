@@ -15,6 +15,23 @@ function mobile() {
   return window.matchMedia("(max-width: 860px)").matches;
 }
 
+function root() {
+  return document.getElementById("fresh-console");
+}
+
+function vanillaMode() {
+  return Boolean(root()?.classList.contains("fc-profile-vanilla"));
+}
+
+function visibleDockItems() {
+  if (!vanillaMode()) return dockItems;
+  return dockItems.filter((item) => item.id !== "mods" && item.id !== "shaders");
+}
+
+function normalizeActivePanel() {
+  if (vanillaMode() && (activePanel === "mods" || activePanel === "shaders")) activePanel = "resourcePacks";
+}
+
 function cleanLabel(value: string) {
   return value.replace(/\d+/g, "").trim();
 }
@@ -50,6 +67,7 @@ function setPanelVisibility(editor: HTMLElement) {
     return;
   }
 
+  normalizeActivePanel();
   if (activePanel === "settings") {
     side.style.setProperty("display", "block", "important");
     main.style.setProperty("display", "none", "important");
@@ -67,17 +85,18 @@ function ensureDock(editor: HTMLElement) {
     return;
   }
 
+  normalizeActivePanel();
   if (!dock) {
     dock = document.createElement("nav");
     dock.className = "fc-mobile-dock";
     dock.setAttribute("aria-label", "모바일 에디터 메뉴");
     dock.innerHTML = `<div class="fc-mobile-dock-tabs"></div>`;
-    document.getElementById("fresh-console")?.append(dock);
+    root()?.append(dock);
   }
 
   const tabs = dock.querySelector<HTMLElement>(".fc-mobile-dock-tabs")!;
   tabs.innerHTML = "";
-  for (const item of dockItems) {
+  for (const item of visibleDockItems()) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = item.id === activePanel ? "active" : "";
@@ -112,7 +131,7 @@ export function registerFreshMobileDock() {
   if (registered || typeof window === "undefined") return;
   registered = true;
   const observer = new MutationObserver(schedule);
-  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style", "disabled"] });
   window.addEventListener("resize", schedule, { passive: true });
   window.addEventListener("orientationchange", schedule, { passive: true });
   schedule();
