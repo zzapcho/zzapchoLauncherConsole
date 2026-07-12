@@ -34,6 +34,21 @@ let loading = false;
 let registered = false;
 let timer = 0;
 
+function injectStyle() {
+  if (document.getElementById("fresh-asset-link-style")) return;
+  const style = document.createElement("style");
+  style.id = "fresh-asset-link-style";
+  style.textContent = `
+    #fresh-console .fc-version-chip{display:inline-flex;align-items:center;width:fit-content;max-width:100%;min-height:22px;padding:3px 8px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(255,255,255,.055);color:#cbd5e1;cursor:pointer;font-size:.72rem;font-weight:850;line-height:1}
+    #fresh-console .fc-version-chip:hover{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#eef2f7}
+    #fresh-console .fc-version-chip.has-warning{border-color:rgba(251,191,36,.32);background:rgba(251,191,36,.08);color:#fbbf24}
+    #fresh-console .fc-library-bar{grid-template-columns:100px 82px minmax(0,1fr)}
+    #fresh-console .fc-link-add-button{white-space:nowrap}
+    @media(max-width:860px){#fresh-console .fc-version-chip{min-height:21px;padding:3px 7px;font-size:.68rem}#fresh-console .fc-library-bar{grid-template-columns:76px 62px minmax(0,1fr)!important}}
+  `;
+  document.head.append(style);
+}
+
 function stripCount(value: string) {
   return value.replace(/\d+/g, "").trim();
 }
@@ -269,6 +284,7 @@ function ensureLinkButton() {
 
 function enhanceNow() {
   void ensureProfiles();
+  injectStyle();
   ensureLinkButton();
   const profile = findProfile();
   const kind = activeKind();
@@ -304,6 +320,7 @@ function schedule() {
 export function registerFreshAssetVersionEnhancer() {
   if (registered || typeof window === "undefined") return;
   registered = true;
+  injectStyle();
   const observer = new MutationObserver(schedule);
   observer.observe(document.body, { childList: true, subtree: true });
   window.addEventListener("focus", () => { profilesCache = null; schedule(); });
