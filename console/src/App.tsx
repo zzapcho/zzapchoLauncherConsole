@@ -7,6 +7,7 @@ import "./freshConsoleFix.css";
 import "./freshMobile.css";
 import "./freshToggleFix.css";
 import "./freshAssetVersion.css";
+import "./freshMobileFinal.css";
 
 export function App() {
   useEffect(() => {
