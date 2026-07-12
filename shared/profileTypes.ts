@@ -16,6 +16,7 @@ export interface LauncherAsset {
   iconUrl?: string;
   projectUrl?: string;
   fromModpack?: boolean;
+  supportedGameVersions?: string[];
 }
 
 export interface LauncherModpack {
@@ -82,7 +83,7 @@ export const MOD_LOADERS: ModLoader[] = ["vanilla", "fabric", "forge", "quilt"];
 
 export const DEFAULT_EDITABLE_FIELDS: EditableFields = {
   server: true,
-  mods: false,
+  mods: true,
   resourcePacks: true,
   shaders: true,
   minecraftVersion: false,
