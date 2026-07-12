@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { ConsoleAppFresh } from "./ConsoleAppFresh";
 import { registerFreshAssetVersionEnhancer } from "./freshAssetVersionEnhancer";
-import { registerFreshMobileDock } from "./freshMobileDock";
+import { registerFreshMobileDockSafe } from "./freshMobileDockSafe";
 import { registerFreshUiBehaviorFixes } from "./freshUiBehaviorFixes";
 import "./curseForgeVersionCache";
 import "./freshConsole.css";
@@ -17,7 +17,7 @@ export function App() {
   useEffect(() => {
     registerFreshAssetVersionEnhancer();
     registerFreshUiBehaviorFixes();
-    registerFreshMobileDock();
+    registerFreshMobileDockSafe();
   }, []);
 
   return <ConsoleAppFresh />;
