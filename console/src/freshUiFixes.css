@@ -1,0 +1,51 @@
+#fresh-console .fc-save-state.quiet {
+  display: none !important;
+}
+
+@media (max-width: 860px) {
+  #fresh-console .fc-editor {
+    padding-bottom: 150px !important;
+  }
+
+  #fresh-console .fc-side,
+  #fresh-console .fc-main-panel,
+  #fresh-console .fc-assets {
+    padding-bottom: 130px !important;
+  }
+
+  #fresh-console .fc-installed::after,
+  #fresh-console .fc-results::after {
+    content: "";
+    display: block;
+    height: 110px;
+  }
+
+  #fresh-console .fc-scroll-top-button {
+    position: fixed !important;
+    right: 14px !important;
+    top: 82px !important;
+    z-index: 5050 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 44px !important;
+    height: 44px !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 999px !important;
+    background: rgba(16, 23, 34, 0.94) !important;
+    color: #f8fafc !important;
+    font-size: 1.2rem !important;
+    font-weight: 950 !important;
+    backdrop-filter: blur(18px) !important;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.42) !important;
+  }
+
+  #fresh-console.fc-profile-vanilla .fc-mobile-dock button[data-panel="mods"],
+  #fresh-console.fc-profile-vanilla .fc-mobile-dock button[data-panel="shaders"] {
+    display: none !important;
+  }
+
+  #fresh-console.fc-profile-vanilla .fc-mobile-dock-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
