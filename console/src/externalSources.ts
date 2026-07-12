@@ -153,7 +153,7 @@ function displayVersion(option: AssetVersionOption, profile: LauncherProfile, re
 export async function searchModrinthProjects(kind: ProjectKind, query = "", offset = 0, limit = 12): Promise<ExternalProject[]> {
   const params = new URLSearchParams({
     query,
-    limit: String(limit),
+    limit: String(Math.max(limit, 48)),
     offset: String(offset),
     facets: typeFacet(kind),
     index: query.trim() ? "relevance" : "follows",
