@@ -1,0 +1,48 @@
+#fresh-console .fc-version-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+#fresh-console .fc-version-chip:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #eef2f7;
+}
+
+#fresh-console .fc-version-chip.has-warning {
+  border-color: rgba(251, 191, 36, 0.32);
+  background: rgba(251, 191, 36, 0.08);
+  color: #fbbf24;
+}
+
+#fresh-console .fc-library-bar {
+  grid-template-columns: 100px 82px minmax(0, 1fr);
+}
+
+#fresh-console .fc-link-add-button {
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  #fresh-console .fc-version-chip {
+    min-height: 21px;
+    padding: 3px 7px;
+    font-size: 0.68rem;
+  }
+
+  #fresh-console .fc-library-bar {
+    grid-template-columns: 76px 62px minmax(0, 1fr) !important;
+  }
+}
